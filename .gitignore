@@ -1,0 +1,67 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDEs / editors
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.pidb
+*.svclog
+*.pdb
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio / Rider
+*.DotSettings.user
+_ReSharper.Caches/
+
+# Unity 6 client (paths relative to repo root)
+Client/[Ll]ibrary/
+Client/[Tt]emp/
+Client/[Oo]bj/
+Client/[Bb]uild/
+Client/[Bb]uilds/
+Client/[Ll]ogs/
+Client/[Uu]ser[Ss]ettings/
+Client/[Mm]emoryCaptures/
+Client/[Rr]ecordings/
+Client/ExportedObj/
+Client/.consulo/
+Client/*.apk
+Client/*.aab
+Client/*.unitypackage
+Client/sysinfo.txt
+Client/MonoCrash.mem
+
+# Unity auto-generated (keep .meta for Assets; ignore local tool noise)
+Client/AssetStoreTools*
+
+# Gradle / Android (Unity)
+Client/**/.gradle/
+Client/**/local.properties
+
+# .NET / ASP.NET Core (Server)
+**/bin/
+**/obj/
+**/out/
+**/TestResults/
+*.cache
+project.lock.json
+artifacts/
+
+# NuGet (local caches only)
+**/packages/*/
+!**/packages/build/
+
+# Misc
+*.log
+*.tmp
+*.temp
+~$*
