@@ -1,0 +1,86 @@
+{
+  "phase": "Day 3 - Multi-Hero & Multi-Enemy System",
+  "description": "GDD v2.0 적용: 단일 히어로에서 다중 히어로(덱 빌딩) 및 다중 몬스터(웨이브) 시스템으로 전환. 블록 5종 확장, 캐스케이드 개별 스킬 발동, 개별 궁극기, 타겟팅 시스템 구현.",
+  "tasks": [
+    {
+      "id": "T-D3-001",
+      "title": "BlockType 확장 및 히어로-색상 인덱스 매핑",
+      "description": "BlockType enum에 Purple(5) 추가. Constants.BLOCK_TYPE_COUNT를 5로 변경. HeroColorMap 유틸 클래스 신규 생성: 배치 인덱스(0~4)와 BlockType 간 양방향 매핑 (Index 0=Red, 1=Yellow, 2=Green, 3=Blue, 4=Purple). GetBlockType(int index), GetHeroIndex(BlockType type) 메서드 제공.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "T-D3-002",
+      "title": "HeroParty 데이터 모델",
+      "description": "HeroParty 순수 C# 클래스 신규 생성: List<HeroState> 관리, 최소 3명 / 최대 5명 검증 (InvalidDeckException). HeroState에 PartyIndex 프로퍼티 추가 및 매핑된 BlockType 참조. GetHeroByColor(BlockType), GetAliveHeroes(), GetFrontHero() (살아있는 최소 인덱스 히어로) 메서드 제공. 히어로 사망 시 OnHeroDied(int partyIndex) 이벤트 발행.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-D3-001"]
+    },
+    {
+      "id": "T-D3-003",
+      "title": "활성 블록 기반 보드 로직 수정",
+      "description": "Board.Initialize()와 Refill()에 활성 색상 목록(List<BlockType>)을 받도록 수정: 활성 히어로 색상만 드롭. RemoveBlocksOfType(BlockType) 메서드 추가: 히어로 사망 시 해당 색상 블록을 즉시 None으로 클리어. BoardController에 활성 색상 목록 관리 및 히어로 사망 시 블록 제거 후 중력+리필 트리거 로직 추가.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-D3-001", "T-D3-002"]
+    },
+    {
+      "id": "T-D3-004",
+      "title": "캐스케이드 개별 스킬 발동 리팩터링",
+      "description": "BoardController의 '첫 매치 색상 통일(PrimaryColor)' 로직 제거. CascadeCompleteEvent 구조 변경: PrimaryColor 제거, List<ColorMatchData> (색상별 매칭 블록 수, 발동 시점 콤보) 추가. DamageCalculator에 개별 색상별 계산 메서드 추가. SkillSystem을 다중 히어로 대상으로 리팩터링: HeroParty 참조, 색상별 해당 히어로 스킬 발동. ComboCalculator에서 MAX_COMBO_CAP 제거 (무제한 증폭).",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-D3-002", "T-D3-003"]
+    },
+    {
+      "id": "T-D3-005",
+      "title": "개별 궁극기 게이지 시스템",
+      "description": "UltimateGauge를 히어로별 개별 게이지로 리팩터링. 자기 색상 블록 매칭 시에만 해당 히어로 게이지 충전. HeroParty 또는 별도 UltimateGaugeManager에서 Dictionary<int, UltimateGauge> (partyIndex → gauge) 관리. 개별 히어로 초상화 터치로 해당 히어로 궁극기만 발동. OnGaugeChanged(int heroIndex, int current, int max) 이벤트.",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": ["T-D3-002"]
+    },
+    {
+      "id": "T-D3-006",
+      "title": "다중 적(웨이브) 시스템 및 타겟팅",
+      "description": "EnemyWave 순수 C# 클래스 신규 생성: List<EnemyState> 관리, 웨이브별 적 스폰/전멸 체크. EnemyState에 waveIndex(위치) 추가. TargetingSystem 신규 생성: GetPriorityTarget(List<EnemyState>) — 가장 전방(살아있는 최소 인덱스) 적 반환. SetManualTarget(int enemyIndex) — 유저 탭 일점사 지정. GetHeroTarget(HeroParty) — 적이 공격할 히어로 결정 (Index 0 우선, 사망 시 다음 인덱스).",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-D3-002"]
+    },
+    {
+      "id": "T-D3-007",
+      "title": "BattleManager 멀티 히어로/적 오케스트레이션",
+      "description": "BattleManager 전면 리팩터링: StartBattle(HeroParty, EnemyWave, BoardController) 시그니처 변경. 히어로별 자동 공격 루프 (각각의 CancellationToken). CascadeCompleteEvent 수신 시 색상별 해당 히어로 스킬 개별 발동 + 해당 히어로 궁극기 게이지 충전. 히어로 사망 → BoardController에 해당 색상 블록 제거 요청 → 전원 사망 시 패배. 적 사망 → 전멸 시 승리. 다중 적 자동 공격/스킬 루프 관리.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-D3-003", "T-D3-004", "T-D3-005", "T-D3-006"]
+    },
+    {
+      "id": "T-D3-008",
+      "title": "히어로 사망 시 비활성 블록(Disabled) 처리",
+      "description": "히어로 사망 시 해당 색상 블록을 제거(None)하는 대신 Disabled(회색) 상태로 전환. BlockType에 Disabled 값 추가. Disabled 블록은 이동 불가(스왑 대상 제외), 매칭 불가(Matcher에서 None과 동일 취급), 중력에 의한 낙하도 하지 않는 고정 장애물. Board.RemoveBlocksOfType() → ConvertBlocksToDisabled()로 변경. BoardController.RemoveColorAndCascadeAsync() → DisableColorAsync()로 리팩터링: 블록을 Disabled로 전환 후 중력+리필 처리(Disabled 블록은 낙하하지 않으므로 그 위의 블록만 낙하). BlockView에 Disabled 상태 회색 렌더링 추가. PuzzleBoardView에서 HeroColorRemovedEvent 대신 HeroColorDisabledEvent 구독하여 회색 전환 애니메이션 처리.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-D3-003", "T-D3-007"]
+    },
+    {
+      "id": "T-D3-009",
+      "title": "EnemyHUD 월드 스페이스 전환 — 초상화 제거 및 HP/캐스팅 바를 적 스프라이트 위에 배치",
+      "description": "EnemyHUDView에서 몬스터 초상화(PortraitImage) 제거. HP 바와 캐스팅 바를 Canvas(Screen Space) 기반에서 월드 스페이스 기반으로 전환하여 EnemyEntityView 스프라이트 위에 직접 배치. EnemyEntityView 프리팹에 HP 바/캐스팅 바 UI를 자식으로 포함하도록 구조 변경. BattleHUD.BindWave()에서 EnemyHUDView 동적 생성 대신 EnemyEntityView 내장 HP/캐스팅 바에 직접 바인딩하도록 수정. EnemyHUDView의 TargetButton(일점사)은 EnemyEntityView의 Collider2D 터치로 대체.",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": ["T-D3-006", "T-D3-007"]
+    },
+    {
+      "id": "T-D3-010",
+      "title": "유저 데이터 시스템 및 서버 통신 기반 히어로 스폰",
+      "description": "서버 API 연동을 위한 클라이언트 네트워크 레이어 구축. ApiClient (UnityWebRequest 기반, async/await) 신규 생성: Base URL 설정, JSON 직렬화/역직렬화, 에러 핸들링. UserData DTO 정의: userId, ownedHeroes(보유 히어로 목록), deployedHeroIds(배치된 히어로 ID 목록). HeroData DTO 정의: heroId, name, maxHP, attack, defense, skillType, baseValuePerBlock, skillName. 서버 엔드포인트 스텁: GET /api/user/{userId} → UserData 반환 (서버 미구현 시 로컬 JSON 폴백). GameManager.InitializeServices() 리팩터링: 하드코딩된 히어로 생성 → ApiClient로 UserData 조회 → deployedHeroIds 기반 HeroState 리스트 생성 → HeroParty 구성 → 전투 시작. 서버 프로젝트: .NET 8 Minimal API로 /api/user/{userId} 엔드포인트 생성 (Dapper + 인메모리/SQLite). 서버 미응답 시 로컬 캐시 폴백.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-D3-002", "T-D3-007"]
+    }
+  ]
+}

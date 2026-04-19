@@ -1,0 +1,84 @@
+{
+  "phase": "Day 2 - QA & Visual Improvements",
+  "description": "치명적 버그 수정, 전투 플로팅 텍스트, 몬스터 평타, 오브젝트 풀링, 색상 버그 수정",
+  "tasks": [
+    {
+      "id": "T-D2-001",
+      "title": "버그 수정: 블록 스왑 실패 시 원위치 복귀 미작동",
+      "description": "PuzzleBoardView.OnSwap에서 IsValid=false 이벤트를 무시(return)하여 블록 비주얼이 원위치로 복귀되지 않는 버그 수정. BoardController는 매치 없을 때 같은 좌표로 두 번째 SwapEvent(IsValid=false)를 발행하므로, OnSwap에서 IsValid 여부와 무관하게 항상 비주얼 스왑을 수행하면 자연스럽게 원위치됨. BlockView.AnimateMoveTo에 Ease 파라미터를 추가하여 복귀 시 InOutSine으로 부드러운 원위치 연출.",
+      "status": "completed",
+      "priority": "critical",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/PuzzleBoardView.cs",
+        "Client/Assets/_Project/Scripts/UI/BlockView.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D2-002",
+      "title": "개선: Player/Enemy 데미지 플로팅 텍스트 표시",
+      "description": "피해를 입을 때 Player 혹은 Enemy 오브젝트 위에 데미지 숫자가 떠오르며 페이드 아웃되는 플로팅 텍스트 추가. HeroState/EnemyState에 OnDamageTaken(int) 이벤트를 추가하고, FloatingTextView MonoBehaviour(TextMeshPro 기반 월드 스페이스)를 신규 생성. BattleSceneView에서 이벤트를 구독하여 해당 스프라이트 위치 위에 텍스트 인스턴스화.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/HeroState.cs",
+        "Client/Assets/_Project/Scripts/Battle/EnemyState.cs",
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs",
+        "Client/Assets/_Project/Scripts/Core/GameManager.cs"
+      ],
+      "files_to_create": [
+        "Client/Assets/_Project/Scripts/UI/FloatingTextView.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D2-003",
+      "title": "개선: 스킬 발동 시 Player 위에 스킬명 텍스트 표시",
+      "description": "블록 매칭으로 스킬이 발동됐을 때 Player 오브젝트 위에 스킬명 텍스트를 플로팅 텍스트로 표시. SkillSystem.OnSkillExecuted 이벤트의 SkillEffect.Type(BlockType)을 스킬명으로 매핑(Red=공격, Blue=방어, Green=회복, Yellow=기절)하여 색상 구분과 함께 표시. BattleSceneView의 기존 OnSkillExecuted 핸들러 확장.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": ["T-D2-002"]
+    },
+    {
+      "id": "T-D2-004",
+      "title": "개선: Monster 평타 공격 추가",
+      "description": "Monster도 Hero처럼 주기적 자동 평타를 가지도록 구현. EnemyState에 AutoAttackInterval(3.0f), AutoAttackRatio(0.1f), OnAutoAttack 이벤트, GetAutoAttackDamage(), NotifyAutoAttack() 추가. BattleManager에 EnemyAutoAttackLoop 추가(기절 시 스킵). BattleSceneView에서 OnAutoAttack 바인딩으로 적 펀치 + 영웅 피격 플래시 연출.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/EnemyState.cs",
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs",
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D2-005",
+      "title": "성능: FloatingTextView / BlockView 오브젝트 풀링 도입",
+      "description": "FloatingTextView는 매 이벤트마다 Instantiate→Destroy로 GC 압박이 발생하므로 Queue 기반 풀로 교체. BlockView는 AnimateDestroy에서 SetActive(false)만 하고 재사용하지 않으므로 풀로 교체. FloatingTextView에 OnRelease 콜백 추가, BattleSceneView에 풀 관리 추가. BlockView.AnimateDestroy에 onComplete 콜백 추가, PuzzleBoardView에 풀 관리 추가.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/FloatingTextView.cs",
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs",
+        "Client/Assets/_Project/Scripts/UI/BlockView.cs",
+        "Client/Assets/_Project/Scripts/UI/PuzzleBoardView.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D2-006",
+      "title": "버그 수정: 연속 피격 시 SpriteRenderer 색상 영구 변경",
+      "description": "BattleSceneView에서 DOColor(...).OnComplete(() => DOColor(white))를 사용 중인데, 연속 피격 시 진행 중인 tween이 DOKill되면 OnComplete가 호출되지 않아 원본 색상 복귀가 누락됨. FlashColor(sprite, flashColor, baseColor, duration) 헬퍼를 추가하여 DOKill + 단일 Sequence(flash→복귀) 패턴으로 교체. Bind()에서 원본 색상을 저장.",
+      "status": "completed",
+      "priority": "critical",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": []
+    }
+  ]
+}

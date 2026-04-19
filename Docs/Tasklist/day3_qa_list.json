@@ -1,0 +1,41 @@
+{
+  "phase": "Day 3 - QA & Improvements",
+  "description": "HUD disabled 버그, 데미지 텍스트 미출력 버그, 스킬 즉시 발동 개선",
+  "tasks": [
+    {
+      "id": "T-D3-001",
+      "title": "버그 수정: HeroHUDView / EnemyHUDView 프리팹 Disabled 상태",
+      "description": "BattleHUD.BindParty/BindWave에서 Instantiate한 HUDView 프리팹이 비활성(disabled) 상태로 스폰되어 초상화와 HP 바가 보이지 않는 버그 수정. Unity의 Instantiate는 프리팹 루트의 activeSelf 상태를 그대로 복사하므로, Instantiate 직후 view.gameObject.SetActive(true)를 명시적으로 호출하여 항상 활성화 보장.",
+      "status": "completed",
+      "priority": "critical",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleHUD.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D3-002",
+      "title": "버그 수정: 피격 데미지 플로팅 텍스트 미출력",
+      "description": "BattleSceneView를 단일 스프라이트 구조에서 다중 EntityView 구조로 리팩터링하는 과정에서 hero.OnDamageTaken / enemy.OnDamageTaken 이벤트의 SpawnDamageText 구독이 제거됨. SpawnHeroes()와 SpawnEnemies() 내부에서 각 엔티티의 OnDamageTaken을 구독하여 해당 EntityView의 WorldPosition 기준으로 데미지 텍스트를 스폰하도록 복구.",
+      "status": "completed",
+      "priority": "critical",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D3-003",
+      "title": "개선: 콤보 캐스케이드 종료 후 스킬 발동 → 매칭 즉시 스킬 발동",
+      "description": "BoardController가 캐스케이드 루프 전체 colorData를 누적한 뒤 CascadeCompleteEvent를 한 번만 발행하고, BattleManager가 그 시점에 일괄 ExecuteFromCascade를 호출하여 모든 스킬이 콤보 종료 후 발동되는 문제 개선. 새 MatchStepSkillTriggerEvent를 각 캐스케이드 스텝마다 발행하고 BattleManager가 스텝별로 즉시 스킬/콤보/궁극기 충전을 처리. CascadeCompleteEvent는 콤보 리셋 전용으로 역할 축소.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Puzzle/Events.cs",
+        "Client/Assets/_Project/Scripts/Puzzle/BoardController.cs",
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs"
+      ],
+      "dependencies": []
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "phase": "Day 4 - Stage & Monster System",
+  "description": "GDD '스테이지 및 몬스터 시스템 v1.0' 기반의 데이터 주도 스테이지 진행 흐름 전체 구현. MonsterData/StageData JSON 로드, 스테이지 선택 UI, 에너지 시스템, 전투 보상 시스템, 게임 플로우 오케스트레이션.",
+  "tasks": [
+    {
+      "id": "T-D4-001",
+      "title": "MonsterData.json 생성 및 MonsterDataRepository 구현",
+      "description": "GDD 2.1 스키마에 따라 Resources/MonsterData.json 파일을 작성한다 (슬라임 1001, 화염 오크 2005 샘플 포함). MonsterDataRepository.cs는 Resources.Load<TextAsset>로 JSON을 파싱하고 Dictionary<int, MonsterData>를 캐시한다. GetById(int id)로 단건 조회, GetAll()로 전체 목록 반환.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/Resources/MonsterData.json",
+        "Client/Assets/_Project/Scripts/Data/MonsterDataRepository.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D4-002",
+      "title": "StageData.json 생성 및 StageDataRepository 구현",
+      "description": "GDD 2.2 스키마에 따라 Resources/StageData.json 파일을 작성한다 (1-1 고블린 숲 2웨이브, 1-2 2스테이지 샘플). StageDataRepository.cs는 JSON 파싱 후 Dictionary<int, StageData>를 캐시. GetById(int stageId), GetAll() 제공. WaveData는 MonsterIds int[] 리스트를 포함.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/Resources/StageData.json",
+        "Client/Assets/_Project/Scripts/Data/StageDataRepository.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D4-003",
+      "title": "BattleSetupData 모델 및 Stage 기반 BattleManager 초기화",
+      "description": "BattleSetupData.cs를 신규 작성. 생성자에서 StageData + MonsterDataRepository를 받아 EnemyWave[]를 빌드한다 (MonsterIds → EnemyState 배열 변환, 인덱스 0이 전방 탱커). BattleManager.StartBattle(HeroParty, BattleSetupData, BoardController)로 진입 방식을 변경. 멀티웨이브 진행 로직(AdvanceWave), OnWaveChanged 이벤트 추가. SkillSystem.SetWave() 추가.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/BattleSetupData.cs",
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs",
+        "Client/Assets/_Project/Scripts/Battle/SkillSystem.cs",
+        "Client/Assets/_Project/Scripts/Battle/EnemyState.cs",
+        "Client/Assets/_Project/Scripts/Battle/BattleEvents.cs"
+      ],
+      "dependencies": ["T-D4-001", "T-D4-002"]
+    },
+    {
+      "id": "T-D4-004",
+      "title": "에너지 시스템 구현",
+      "description": "UserGameDataDTO에 Energy(int) 필드 추가. GameManager.TryConsumeEnergy(int cost): 에너지 부족 시 false 반환으로 진입 차단. Server/ProjectP.Server/Program.cs에 POST /api/user/energy/consume 엔드포인트 스텁 추가 (요청: userId, amount / 응답: remainingEnergy). UserGameDataResponse에 Energy 필드 추가.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Data/UserDataDTO.cs",
+        "Client/Assets/_Project/Scripts/Core/GameManager.cs",
+        "Server/ProjectP.Server/Program.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D4-005",
+      "title": "전투 보상 시스템 구현",
+      "description": "BattleResult.cs 신규 작성 (StageId, DeployedHeroCount, SurvivedHeroIds, IsCleared). RewardCalculator.cs 신규 작성: EXP = Mathf.FloorToInt(TotalExp / DeployedHeroCount), Gold = ClearRewards.TotalGold. BattleManager 클리어/패배 시 BattleCompleteEvent(BattleResult) 발행. Server POST /api/battle/complete 스텁 추가.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/BattleResult.cs",
+        "Client/Assets/_Project/Scripts/Battle/RewardCalculator.cs",
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs",
+        "Server/ProjectP.Server/Program.cs"
+      ],
+      "dependencies": ["T-D4-002"]
+    },
+    {
+      "id": "T-D4-006",
+      "title": "Stage Select UI 구현",
+      "description": "StageSelectView.cs: Awake에서 StageDataRepository.GetAll()로 스테이지 목록을 불러와 StageCellView 프리팹을 동적으로 생성. StageCellView.cs: StageName, EntryCost(에너지 아이콘+숫자), 웨이브 수, TotalExp/TotalGold 보상 텍스트 표시. 셀 클릭 시 에너지 부족이면 '에너지 부족' 팝업, 충분하면 에너지 차감 후 GameFlowManager.LoadBattleScene(stageId) 호출.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/StageSelectView.cs",
+        "Client/Assets/_Project/Scripts/UI/StageCellView.cs"
+      ],
+      "dependencies": ["T-D4-002", "T-D4-004"]
+    },
+    {
+      "id": "T-D4-007",
+      "title": "Battle Reward UI 구현",
+      "description": "BattleRewardView.cs 신규 작성. BattleCompleteEvent 수신 시 오버레이 활성화. 히어로별 EXP 목록(HeroExpRowView), 총 획득 골드 표시. '다음 스테이지'(StageId+1 진입, 없으면 비활성), '재도전'(동일 StageId 재진입), '스테이지 선택으로'(StageSelectView로 복귀) 버튼 3종 제공. HeroExpRowView.cs 신규 작성.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleRewardView.cs",
+        "Client/Assets/_Project/Scripts/UI/HeroExpRowView.cs"
+      ],
+      "dependencies": ["T-D4-005"]
+    },
+    {
+      "id": "T-D4-008",
+      "title": "게임 플로우 오케스트레이션 (GameFlowManager)",
+      "description": "GameFlowManager.cs 신규 작성. 씬 전환 상태 머신: MainMenu → StageSelect → BattleScene → RewardOverlay → StageSelect. ServiceLocator에 등록하여 어디서든 접근 가능. CurrentStageId 프로퍼티로 선택 스테이지 유지. BattleSceneView.BindBattleManager()로 웨이브 전환 시 적 뷰 갱신 연결.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Core/GameFlowManager.cs",
+        "Client/Assets/_Project/Scripts/Core/GameManager.cs",
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": ["T-D4-003", "T-D4-006", "T-D4-007"]
+    }
+  ]
+}

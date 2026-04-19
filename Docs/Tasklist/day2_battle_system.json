@@ -1,0 +1,54 @@
+{
+  "phase": "Day 2 - Battle System & Skills",
+  "description": "전투 시스템, 스킬 매핑, 콤보/궁극기 메커니즘 및 배틀 HUD 구현",
+  "tasks": [
+    {
+      "id": "T-008",
+      "title": "HeroState 및 EnemyState 데이터 모델",
+      "description": "HeroState (maxHP, currentHP, shield, attack, defense, level) 순수 C# 클래스 구현. 용사 자동 평타 지원 (1.5초 간격, 공격력 10% 데미지). EnemyState (HP, attack, 스킬 쿨타임/캐스팅) 구현. 몬스터 고유 스킬 시스템: 쿨타임(예:8초)마다 강력한 스킬 시전 + 캐스팅 바 지원. OnHPChanged, OnShieldChanged, OnDeath, OnSkillCast 이벤트 발행.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-002"]
+    },
+    {
+      "id": "T-009",
+      "title": "콤보 시스템 및 데미지 계산기",
+      "description": "ComboCalculator 구현: 캐스케이드 중 콤보 카운트 추적, 콤보 증폭 공식 = 1 + (적용콤보 - 1) * 0.2, MAX_COMBO_CAP = 10 적용 (UI에는 실제 콤보 표시, 데미지 계산에는 캡 적용). 캐스케이드 스킬 색상 규칙: 연쇄로 터지는 모든 블록은 '가장 처음 유저가 매칭한 블록의 색상' 스킬을 따름. DamageCalculator 구현: 블록 타입별 효과 계산.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-004", "T-008"]
+    },
+    {
+      "id": "T-010",
+      "title": "스킬 시스템 (블록→액션 매핑)",
+      "description": "SkillSystem 구현: 캐스케이드 내 모든 매치를 첫 매치 색상 기준으로 스킬 발동. Red -> 적에게 데미지, Blue -> 히어로에 실드, Green -> 히어로 회복, Yellow -> 광역 데미지 + 기절 디버프. 각 스킬은 (totalBlockCount, comboMultiplier)를 받아 HeroState/EnemyState를 이벤트로 수정하는 순수 함수.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-009"]
+    },
+    {
+      "id": "T-011",
+      "title": "궁극기 게이지 시스템",
+      "description": "UltimateGauge 구현: 매칭된 블록 1개당 게이지 +1 충전 (100개 파괴로 만충). 100 도달 시 초상화 점등 + 불타오르는 이펙트. 유저가 초상화를 직접 터치하여 발동. 궁극기 효과: 전체 적에게 강력한 고정 데미지 + 보드판 내 무작위 블록 10개 파괴(연쇄 유도). OnGaugeChanged, OnUltimateReady, OnUltimateActivated 이벤트 발행.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-008"]
+    },
+    {
+      "id": "T-012",
+      "title": "BattleManager 오케스트레이션",
+      "description": "BattleManager 구현: Board.OnCascadeComplete 구독, 매치 결과를 SkillSystem과 ComboCalculator에 전달. 캐스케이드 첫 매치 색상 추적하여 이후 연쇄 매치에 동일 색상 스킬 적용. 용사 자동 평타 루프 (1.5초 간격, UniTask.Delay). 적 자동 공격 + 스킬 쿨타임 루프 관리. 궁극기 발동 시 보드 무작위 10블록 파괴 후 캐스케이드 트리거. 승리/패배 조건 체크. OnBattleWin, OnBattleLose 이벤트 발행.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-010", "T-011"]
+    },
+    {
+      "id": "T-013",
+      "title": "배틀 씬 뷰 및 HUD",
+      "description": "BattleSceneView 구현: 상단 전투 뷰에 용사(좌)/몬스터(우) 배치. 좌측 용사 상태창: 초상화 + HP바 + 초상화 테두리 원형 궁극기 게이지(시계 방향). 우측 몬스터 상태창: 초상화 + HP바 + HP바 하단 스킬 캐스팅 바/타이머. 콤보 카운트 대형 텍스트 표시 (타격감 극대화). 스킬 발동 시 DOTween 이펙트. 궁극기 만충 시 초상화 불타오르는 이펙트 + 터치 입력 수신.",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": ["T-012", "T-007"]
+    }
+  ]
+}

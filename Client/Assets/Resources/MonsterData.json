@@ -1,0 +1,50 @@
+[
+  {
+    "Id": 1001,
+    "DisplayName": "초보자 슬라임",
+    "PrefabPath": "Monsters/Slime_Green",
+    "MaxHP": 500,
+    "Attack": 50,
+    "SkillCooldown": 8.0,
+    "SkillCastTime": 1.5,
+    "SkillDamageMultiplier": 3.0,
+    "AutoAttackInterval": 3.0,
+    "AutoAttackRatio": 0.1
+  },
+  {
+    "Id": 1002,
+    "DisplayName": "강화 슬라임",
+    "PrefabPath": "Monsters/Slime_Red",
+    "MaxHP": 800,
+    "Attack": 70,
+    "SkillCooldown": 10.0,
+    "SkillCastTime": 1.5,
+    "SkillDamageMultiplier": 3.0,
+    "AutoAttackInterval": 2.5,
+    "AutoAttackRatio": 0.1
+  },
+  {
+    "Id": 2005,
+    "DisplayName": "화염 오크",
+    "PrefabPath": "Monsters/Orc_Fire",
+    "MaxHP": 2500,
+    "Attack": 120,
+    "SkillCooldown": 12.0,
+    "SkillCastTime": 2.0,
+    "SkillDamageMultiplier": 4.0,
+    "AutoAttackInterval": 2.5,
+    "AutoAttackRatio": 0.15
+  },
+  {
+    "Id": 2006,
+    "DisplayName": "어둠의 고블린",
+    "PrefabPath": "Monsters/Goblin_Dark",
+    "MaxHP": 1200,
+    "Attack": 90,
+    "SkillCooldown": 9.0,
+    "SkillCastTime": 1.8,
+    "SkillDamageMultiplier": 3.5,
+    "AutoAttackInterval": 2.0,
+    "AutoAttackRatio": 0.12
+  }
+]

@@ -1,0 +1,84 @@
+{
+  "phase": "Day 5 - UserDataManager 분리 및 스테이지 클리어 기반 잠금",
+  "description": "유저 데이터(에너지·히어로·클리어 스테이지 이력) 로딩 로직을 GameManager에서 분리하여 UserDataManager 전담 클래스를 신설. StageSelectView가 클리어 여부를 기반으로 스테이지를 클리어/도전가능/잠금 3종 상태로 표시하도록 개선.",
+  "tasks": [
+    {
+      "id": "T-D5-001",
+      "title": "UserDataDTO에 clearedStageIds 필드 추가",
+      "description": "UserGameDataDTO에 List<int> clearedStageIds 필드를 추가하여 서버 응답 및 로컬 폴백 JSON 모두에서 클리어 스테이지 이력을 수신할 수 있도록 한다.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Data/UserDataDTO.cs",
+        "Client/Assets/Resources/default_user.json"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D5-002",
+      "title": "UserDataManager 신규 생성",
+      "description": "순수 C# 클래스 UserDataManager를 신설. UserGameDataDTO를 보유하고 Energy/DeployedHeroes/ClearedStageIds 프로퍼티를 제공. InitializeAsync(ApiClient, userId)로 UserDataService를 통해 데이터를 로드. TryConsumeEnergy(cost)와 AddClearedStage(stageId)로 런타임 상태 변경을 관리.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Data/UserDataManager.cs"
+      ],
+      "dependencies": ["T-D5-001"]
+    },
+    {
+      "id": "T-D5-003",
+      "title": "GameManager에서 UserDataManager 초기화 및 위임",
+      "description": "GameManager.InitializeServicesAsync()에서 UserDataManager 인스턴스를 생성하고 InitializeAsync()를 await. ServiceLocator에 등록. 기존 _gameData 필드를 제거하고 UserDataManager를 통해 히어로/에너지 데이터에 접근. TryConsumeEnergy()는 UserDataManager로 위임.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Core/GameManager.cs"
+      ],
+      "dependencies": ["T-D5-002"]
+    },
+    {
+      "id": "T-D5-004",
+      "title": "BattleRewardView에 클리어 이력 저장 연결",
+      "description": "BattleRewardView.OnBattleComplete()에서 result.IsCleared가 true일 때 ServiceLocator로 UserDataManager를 조회하여 AddClearedStage(stageId)를 호출. 씬 전환 이후 StageSelectView에서 올바른 클리어 상태가 반영된다.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleRewardView.cs"
+      ],
+      "dependencies": ["T-D5-002"]
+    },
+    {
+      "id": "T-D5-005",
+      "title": "StageSelectView 클리어 기반 상태 분류",
+      "description": "StageSelectView.PopulateStageList()에서 UserDataManager.ClearedStageIds를 조회하여 각 스테이지의 isCleared/isAvailable 여부를 계산. 첫 스테이지이거나 직전 스테이지를 클리어한 경우만 isAvailable=true. StageCellView.Bind(stageData, isCleared, isAvailable) 호출.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/StageSelectView.cs"
+      ],
+      "dependencies": ["T-D5-002"]
+    },
+    {
+      "id": "T-D5-006",
+      "title": "StageCellView 3-상태 Bind 시그니처 변경",
+      "description": "Bind(StageData)를 Bind(StageData, bool isCleared, bool isAvailable)로 변경. _lockOverlay(잠금 오버레이)와 _clearBadge(클리어 배지) SerializeField를 추가. isAvailable에 따라 버튼 interactable 설정. 유니티 에디터에서 프리팹에 Lock Overlay/Clear Badge 오브젝트를 추가하고 슬롯 연결 필요.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/StageCellView.cs"
+      ],
+      "dependencies": ["T-D5-005"]
+    },
+    {
+      "id": "T-D5-007",
+      "title": "서버 clearedStageIds 응답 추가 및 /api/stage/clear 스텁",
+      "description": "Server/Program.cs에 userClearedStagesDb 인메모리 딕셔너리 추가. UserGameDataResponse 레코드에 ClearedStageIds 필드 추가. POST /api/stage/clear 엔드포인트 스텁 추가 (요청: userId, stageId / 응답: clearedStageIds 배열). StageClearRequest 레코드 추가.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Server/ProjectP.Server/Program.cs"
+      ],
+      "dependencies": []
+    }
+  ]
+}

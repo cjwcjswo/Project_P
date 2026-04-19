@@ -1,0 +1,36 @@
+[
+  {
+    "StageId": 1,
+    "StageName": "고블린 숲 1-1",
+    "EntryCost": 5,
+    "Waves": [
+      {
+        "MonsterIds": [1001, 1001]
+      },
+      {
+        "MonsterIds": [1001, 1001, 2005]
+      }
+    ],
+    "ClearRewards": {
+      "TotalExp": 1200,
+      "TotalGold": 300
+    }
+  },
+  {
+    "StageId": 2,
+    "StageName": "어둠의 동굴 1-2",
+    "EntryCost": 5,
+    "Waves": [
+      {
+        "MonsterIds": [1002, 2006]
+      },
+      {
+        "MonsterIds": [2006, 2006, 2005]
+      }
+    ],
+    "ClearRewards": {
+      "TotalExp": 1800,
+      "TotalGold": 450
+    }
+  }
+]

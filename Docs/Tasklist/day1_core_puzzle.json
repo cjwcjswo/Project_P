@@ -1,0 +1,86 @@
+{
+  "phase": "Day 1 - Core Puzzle Logic",
+  "description": "7x6 3매치 퍼즐 보드의 핵심 로직과 비주얼 레이어 구현",
+  "tasks": [
+    {
+      "id": "T-001",
+      "title": "프로젝트 스캐폴딩 및 패키지 설정",
+      "description": "Client/Assets/_Project/ 디렉토리 구조 생성. UniTask (UPM git URL) 및 DOTween을 Packages/manifest.json에 추가. Boot 씬에 GameManager MonoBehaviour 생성하여 ServiceLocator 초기화.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": []
+    },
+    {
+      "id": "T-002",
+      "title": "Core 프레임워크: EventBus 및 ServiceLocator",
+      "description": "EventBus (제네릭 System.Action<T> 기반 publish/subscribe) 및 ServiceLocator (register/resolve 패턴) 구현. 모든 시스템 간 통신의 기반.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-001"]
+    },
+    {
+      "id": "T-003",
+      "title": "Board 데이터 모델 및 블록 스폰",
+      "description": "Board.cs (순수 C# 클래스) 구현: 7x6 BlockType[,] 그리드. 초기 생성 시 3연속 매치가 없도록 랜덤 블록 스폰. BlockType enum (Red, Blue, Green, Yellow) 정의. Constants.cs에 BOARD_WIDTH=7, BOARD_HEIGHT=6 상수 정의.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-002"]
+    },
+    {
+      "id": "T-004",
+      "title": "매치 감지 알고리즘",
+      "description": "Matcher.cs 구현: 가로/세로 스캔으로 3개 이상 연속 동일 색상 블록 그룹 탐지. List<MatchResult> 반환 (위치, 길이, 방향, BlockType). L자/T자 등 겹치는 매치는 단일 클리어 셋으로 병합 처리.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-003"]
+    },
+    {
+      "id": "T-005",
+      "title": "중력 및 리필 로직",
+      "description": "매치 클리어 후 중력 처리 (빈 셀을 열 단위로 블록 낙하) 및 리필 (각 열 상단에 새 랜덤 블록 스폰). Board에서 블록 이동 목록을 반환하여 뷰 레이어에서 애니메이션 처리 가능하도록 설계.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-004"]
+    },
+    {
+      "id": "T-006",
+      "title": "스왑 입력 및 캐스케이드 루프",
+      "description": "Board에 스왑 로직 구현: 인접한 두 셀 위치를 받아 블록 교환 -> 매치 확인. 매치 없으면 원위치 (무효 이동). 매치 발견 시 클리어 -> 중력 -> 리필 -> 재매치 확인 (캐스케이드 루프). 전체 캐스케이드는 async UniTask 시퀀스. OnSwap, OnMatchFound, OnCascadeComplete 이벤트 발행.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-005"]
+    },
+    {
+      "id": "T-007",
+      "title": "PuzzleBoardView 및 BlockView (비주얼 레이어)",
+      "description": "PuzzleBoardView MonoBehaviour 구현: 화면 하단 50%에 7x6 그리드로 블록 프리팹 인스턴스화. BlockView: 블록 타입별 스프라이트 렌더러, 스왑/낙하/파괴 DOTween 애니메이션 처리. Board 이벤트 구독하여 비주얼 업데이트. 터치/마우스 입력으로 스왑 제스처 (드래그 방향 감지) 처리.",
+      "status": "completed",
+      "priority": "high",
+      "dependencies": ["T-006"]
+    },
+    {
+      "id": "T-008",
+      "title": "PuzzleBoardView 레이아웃 파라미터화 (padding/간격)",
+      "description": "하단 50% 세로 제약을 유지한 채, 해당 영역 안에서 padding(상/좌/우/하)과 블록 간 보이는 간격(gap)을 인스펙터에서 조절할 수 있도록 레이아웃 계산을 개선. 좌표 변환(WorldToGrid)과 스왑 임계값도 동일 기준으로 정합성 유지.",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": ["T-007"]
+    },
+    {
+      "id": "T-009",
+      "title": "BlockType별 BlockView 프리팹 매핑 및 풀링",
+      "description": "PuzzleBoardView에서 BlockType별 서로 다른 BlockView 프리팹을 인스펙터 매핑으로 스폰. 프리팹 단위 풀(_poolByPrefab)과 BlockView.SourcePrefab 키로 반환. Disabled는 기본 프리팹에서 Setup만. 리필/초기 스폰/파괴 반환 경로 정합성 유지.",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": ["T-008"]
+    },
+    {
+      "id": "T-010",
+      "title": "단일 Block 프리팹 + BlockType→Sprite 매핑",
+      "description": "PuzzleBoardView는 단일 BlockView 프리팹과 단일 풀로 스폰. BlockView에 인스펙터 BlockType→Sprite 매핑 및 ApplyVisual 로직 추가. T-009의 타입별 프리팹 방식은 스프라이트 방식으로 대체.",
+      "status": "completed",
+      "priority": "medium",
+      "dependencies": ["T-009"]
+    }
+  ]
+}

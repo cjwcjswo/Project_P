@@ -1,0 +1,124 @@
+{
+  "phase": "Day 6 - Data-Driven Hero & Skill System",
+  "description": "GDD '히어로 및 스킬 1_0' 기반 데이터 주도 히어로/스킬 시스템 구현. HeroData.json/SkillData.json 리포지토리 신설, ActionType+TargetScope 조합형 스킬 모델 전환, StatusEffect 런타임 시스템, 레벨/EXP 성장 공식 적용, 기존 HeroFactory/SkillSystem/DamageCalculator 리팩터링.",
+  "tasks": [
+    {
+      "id": "T-D6-001",
+      "title": "SkillData.json 생성 및 SkillDataRepository 구현",
+      "description": "GDD 3.1 스키마에 따라 Resources/SkillData.json 작성. 필드: Id(uint), DisplayName, EffectPrefabPath, ActionType(Attack/Heal/Shield/Buff), TargetScope(Single/Multi/All), MaxTargetCount, BaseMultiplier, StatusEffects[]. 샘플 스킬 4~5종 포함 (회전베기·힐·방어막·버프·단일공격). SkillDataRepository.cs는 MonsterDataRepository 패턴 동일: Resources.Load → Dictionary 캐시, GetById/GetAll.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/Resources/SkillData.json",
+        "Client/Assets/_Project/Scripts/Data/SkillDataRepository.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D6-002",
+      "title": "HeroData.json 생성 및 HeroDataRepository 구현",
+      "description": "GDD 2.1 스키마에 따라 Resources/HeroData.json 작성. 필드: Id(uint), DisplayName, PrefabPath, Grade(1~5), SkillId(SkillData 매핑), BaseStats{MaxHP,Attack,Defense}, GrowthStats{MaxHP,Attack,Defense}, AutoAttackInterval, AutoAttackRatio. 샘플 히어로 5종 (파티 슬롯 5개 매핑). HeroDataRepository.cs: Dictionary 캐시, GetById/GetAll.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/Resources/HeroData.json",
+        "Client/Assets/_Project/Scripts/Data/HeroDataRepository.cs"
+      ],
+      "dependencies": ["T-D6-001"]
+    },
+    {
+      "id": "T-D6-003",
+      "title": "스킬 모델 리팩터링: ActionType + TargetScope 조합형 전환",
+      "description": "기존 SkillType enum(SingleAttack/AoEAttack/Heal/Shield/EnhancedAttack)을 GDD 기준 ActionType(Attack/Heal/Shield/Buff) + TargetScope(Single/Multi/All) 조합으로 전환. HeroSkill 클래스를 SkillData 기반으로 재설계: BaseMultiplier, MaxTargetCount, StatusEffects 리스트 포함. 기존 SkillEffect struct도 새 모델에 맞춰 업데이트.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/HeroSkill.cs",
+        "Client/Assets/_Project/Scripts/Battle/DamageCalculator.cs"
+      ],
+      "dependencies": ["T-D6-001"]
+    },
+    {
+      "id": "T-D6-004",
+      "title": "StatusEffect 런타임 시스템 구현",
+      "description": "GDD 3.2 명세에 따라 StatusEffect 런타임 시스템 구현. StatusEffectType enum(Stun/Burn/AtkUp/DefDown 등), StatusEffectInstance 클래스(type/value/remainingDuration), StatusEffectHandler 클래스(Tick/Apply/Remove). EnemyState/HeroState에 ActiveEffects 리스트 및 ApplyStatusEffect/TickEffects/RemoveExpiredEffects 메서드 추가. 확률(Probability) 기반 발동 판정 포함.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/StatusEffect.cs",
+        "Client/Assets/_Project/Scripts/Battle/EnemyState.cs",
+        "Client/Assets/_Project/Scripts/Battle/HeroState.cs"
+      ],
+      "dependencies": ["T-D6-003"]
+    },
+    {
+      "id": "T-D6-005",
+      "title": "SkillSystem / DamageCalculator 리팩터링",
+      "description": "SkillSystem.ExecuteSkill()을 ActionType+TargetScope 조합으로 전환. Attack: Single→우선 타겟 1체, Multi→MaxTargetCount체, All→전체. Heal/Shield: Single→시전자, Multi→최저HP N명, All→전체 아군. Buff→아군 대상 AtkUp 등. StatusEffects 배열 순회하며 Probability 판정 후 ApplyStatusEffect 호출. DamageCalculator: BaseMultiplier 기반 계산으로 변경.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/SkillSystem.cs",
+        "Client/Assets/_Project/Scripts/Battle/DamageCalculator.cs"
+      ],
+      "dependencies": ["T-D6-003", "T-D6-004"]
+    },
+    {
+      "id": "T-D6-006",
+      "title": "히어로 레벨/EXP 성장 시스템 구현",
+      "description": "GDD 2.2 성장 공식 적용. HeroState에 CurrentEXP/TotalEXP 필드 추가. 레벨업 필요 EXP = 100 * Level^2 * 1.1^(Level/10). 스탯 성장: 현재스탯 = BaseStat + (Level-1) * GrowthStat. AddEXP(int amount) 메서드: 경험치 누적 → 자동 레벨업(만렙 50) → 스탯 재계산. OnLevelUp 이벤트 추가. HeroDataRepository의 GrowthStats 참조.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/HeroState.cs",
+        "Client/Assets/_Project/Scripts/Data/HeroDataRepository.cs"
+      ],
+      "dependencies": ["T-D6-002"]
+    },
+    {
+      "id": "T-D6-007",
+      "title": "HeroFactory 리팩터링: Repository 기반 생성",
+      "description": "HeroFactory.Create()를 HeroDataRepository + SkillDataRepository 기반으로 변경. Create(int heroDataId, int level, int partyIndex) 시그니처 추가: Repository에서 HeroData 조회 → SkillId로 SkillData 조회 → GrowthStats 적용한 스탯 계산 → HeroState 생성. 기존 HeroDataDTO 기반 Create()는 하위호환용으로 유지하되 내부적으로 Repository 경유. BattleSceneManager의 히어로 파티 구성도 Repository 기반으로 전환.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Data/HeroFactory.cs",
+        "Client/Assets/_Project/Scripts/Core/BattleSceneManager.cs"
+      ],
+      "dependencies": ["T-D6-002", "T-D6-003", "T-D6-006"]
+    },
+    {
+      "id": "T-D6-008",
+      "title": "BattleManager StatusEffect Tick 루프 통합",
+      "description": "BattleManager의 전투 루프에 StatusEffect Tick 처리를 통합. 매 프레임(또는 고정 간격) TickEffects(deltaTime) 호출하여 지속 효과(Burn 도트 데미지, 버프 만료 등) 처리. 기존 Stun 처리 로직을 StatusEffect 시스템으로 통합하여 ApplyStun/RemoveStun 대체.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs"
+      ],
+      "dependencies": ["T-D6-004", "T-D6-005"]
+    },
+    {
+      "id": "T-D6-009",
+      "title": "GameManager에 HeroDataRepository/SkillDataRepository 초기화 등록",
+      "description": "GameManager.InitializeCoreServicesAsync()에서 HeroDataRepository, SkillDataRepository를 생성하고 ServiceLocator에 등록. MonsterDataRepository/StageDataRepository와 동일한 패턴.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Core/GameManager.cs"
+      ],
+      "dependencies": ["T-D6-001", "T-D6-002"]
+    },
+    {
+      "id": "T-D6-010",
+      "title": "서버 히어로/스킬 데이터 API 스텁 추가",
+      "description": "Server/Program.cs에 GET /api/heroes (전체 히어로 목록), GET /api/skills (전체 스킬 목록) 스텁 엔드포인트 추가. 클라이언트 HeroData.json/SkillData.json과 동일 구조 응답. POST /api/hero/levelup 스텁 (요청: userId, heroId, expAmount / 응답: newLevel, newStats).",
+      "status": "completed",
+      "priority": "low",
+      "files_to_modify": [
+        "Server/ProjectP.Server/Program.cs"
+      ],
+      "dependencies": ["T-D6-001", "T-D6-002"]
+    }
+  ]
+}

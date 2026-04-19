@@ -1,0 +1,57 @@
+[
+  {
+    "Id": 10001,
+    "DisplayName": "견습 기사 아서",
+    "PrefabPath": "Heroes/Knight_Arthur",
+    "Grade": 3,
+    "SkillId": 5001,
+    "BaseStats":   { "MaxHP": 1000, "Attack": 100, "Defense": 20 },
+    "GrowthStats": { "MaxHP":  200, "Attack":  15, "Defense":  5 },
+    "AutoAttackInterval": 1.5,
+    "AutoAttackRatio": 0.1
+  },
+  {
+    "Id": 10002,
+    "DisplayName": "성녀 에이다",
+    "PrefabPath": "Heroes/Healer_Ada",
+    "Grade": 4,
+    "SkillId": 5002,
+    "BaseStats":   { "MaxHP":  800, "Attack":  70, "Defense": 15 },
+    "GrowthStats": { "MaxHP":  150, "Attack":  10, "Defense":  4 },
+    "AutoAttackInterval": 2.0,
+    "AutoAttackRatio": 0.08
+  },
+  {
+    "Id": 10003,
+    "DisplayName": "수호자 브리트",
+    "PrefabPath": "Heroes/Guardian_Brit",
+    "Grade": 3,
+    "SkillId": 5003,
+    "BaseStats":   { "MaxHP": 1200, "Attack":  80, "Defense": 35 },
+    "GrowthStats": { "MaxHP":  250, "Attack":  10, "Defense":  8 },
+    "AutoAttackInterval": 2.0,
+    "AutoAttackRatio": 0.1
+  },
+  {
+    "Id": 10004,
+    "DisplayName": "전사 크롬",
+    "PrefabPath": "Heroes/Warrior_Crom",
+    "Grade": 2,
+    "SkillId": 5004,
+    "BaseStats":   { "MaxHP":  900, "Attack": 120, "Defense": 18 },
+    "GrowthStats": { "MaxHP":  180, "Attack":  18, "Defense":  4 },
+    "AutoAttackInterval": 1.8,
+    "AutoAttackRatio": 0.12
+  },
+  {
+    "Id": 10005,
+    "DisplayName": "암살자 레이",
+    "PrefabPath": "Heroes/Assassin_Ray",
+    "Grade": 4,
+    "SkillId": 5005,
+    "BaseStats":   { "MaxHP":  700, "Attack": 150, "Defense": 10 },
+    "GrowthStats": { "MaxHP":  130, "Attack":  22, "Defense":  3 },
+    "AutoAttackInterval": 1.2,
+    "AutoAttackRatio": 0.15
+  }
+]

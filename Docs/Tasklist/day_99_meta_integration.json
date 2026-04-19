@@ -1,0 +1,62 @@
+{
+  "phase": "Day 4 - Meta Systems & Integration",
+  "description": "방치형 RPG 메타 시스템 (스테이지, 에너지, 방치보상, 성장) 및 전체 플로우 통합",
+  "tasks": [
+    {
+      "id": "T-014",
+      "title": "스테이지 진행 시스템",
+      "description": "StageManager 구현: 현재 스테이지 번호 관리, ScriptableObject에서 스테이지별 EnemyData 로드. 전투 승리 시 다음 스테이지로 진행. 적 HP/공격력 배율로 난이도 스케일링. StageData ScriptableObject (stageNumber, enemyId, enemyHPMultiplier, rewardGold, rewardExp) 생성. 테스트용 5개 샘플 StageData SO 생성.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-012"]
+    },
+    {
+      "id": "T-015",
+      "title": "에너지 시스템",
+      "description": "EnergySystem (순수 C#) 구현: 최대 에너지 = 30, 스테이지당 1 에너지 소모, 10분당 1 회복 (DateTime 비교 기반, Update() 사용 금지). OnEnergyChanged 이벤트 발행. 에너지 = 0일 때 전투 진입 차단. 오프라인 회복 계산을 위한 마지막 확인 타임스탬프 저장.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-002"]
+    },
+    {
+      "id": "T-016",
+      "title": "방치형 보상 계산기",
+      "description": "IdleRewardCalculator (순수 C#) 구현: 마지막 로그인 이후 경과 시간과 현재 스테이지 번호를 기반으로 골드/경험치 보상 계산. 공식: gold = stage * 10 * elapsedMinutes, exp = stage * 5 * elapsedMinutes, 최대 12시간 상한. IdleReward 구조체 반환.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-014"]
+    },
+    {
+      "id": "T-017",
+      "title": "히어로 성장 및 레벨업",
+      "description": "HeroProgression 구현: 경험치/골드 추적. 경험치 >= 임계값 (100 * level) 시 레벨업. 레벨업 시 기본 HP/공격/방어 증가. 골드로 수동 레벨업 가능. OnLevelUp, OnStatsChanged 이벤트 발행. 전투 시작 시 히어로 스탯이 HeroState에 반영.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["T-008"]
+    },
+    {
+      "id": "T-018",
+      "title": "방치 보상 팝업 및 로비 UI",
+      "description": "IdleRewardPopup 구현: 게임 실행 시 경과 시간 > 1분이면 표시. 획득 골드/경험치 표시, 2배 버튼 (광고 플레이스홀더). 최소 LobbyUI 구현: 에너지 확인 후 Battle 씬 로드하는 'Battle' 버튼. 현재 스테이지, 에너지, 히어로 레벨 표시.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["T-015", "T-016", "T-017"]
+    },
+    {
+      "id": "T-019",
+      "title": "DeadlockDetector 및 보드 셔플",
+      "description": "DeadlockDetector 구현: 보드에서 유효한 스왑이 가능한지 스캔. 유효한 스왑이 없으면 셔플 트리거 (초기 매치 없는 제약 조건으로 모든 블록 재배치). OnBoardShuffled 이벤트 발행하여 뷰에서 재배치 애니메이션 처리.",
+      "status": "pending",
+      "priority": "medium",
+      "dependencies": ["T-004"]
+    },
+    {
+      "id": "T-020",
+      "title": "E2E 플로우 통합 및 스모크 테스트",
+      "description": "전체 루프 연결: Boot 씬 -> Lobby (방치 보상 표시) -> Battle 탭 (에너지 차감) -> Battle 씬 (퍼즐 + 전투 동작) -> 승리 -> 스테이지 진행 -> Lobby 복귀. 검증 항목: 콤보 배율 정상 적용, 궁극기 게이지 충전/발동, 에너지 0에서 진입 차단, 방치 보상 정상 계산. 이벤트 와이어링 누락 수정.",
+      "status": "pending",
+      "priority": "high",
+      "dependencies": ["T-013", "T-014", "T-018", "T-019"]
+    }
+  ]
+}
