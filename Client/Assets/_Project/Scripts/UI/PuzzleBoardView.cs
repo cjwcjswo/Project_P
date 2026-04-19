@@ -140,12 +140,14 @@ public class PuzzleBoardView : MonoBehaviour
         {
             current.Setup(type, col, row);
             current.transform.position = worldPos;
+            ApplyClassIcon(current, type);
             current.SetWorldSize(_blockWorldSize);
             return current;
         }
 
         var view = GetBlockFromPool(worldPos);
         view.Setup(type, col, row);
+        ApplyClassIcon(view, type);
         view.SetWorldSize(_blockWorldSize);
         return view;
     }
@@ -161,7 +163,6 @@ public class PuzzleBoardView : MonoBehaviour
                 var pos  = GridToWorld(col, row);
                 var view = EnsureBlockViewAt(col, row, type, pos);
                 _blockViews[col, row] = view;
-                ApplyClassIcon(view, type);
             }
         }
     }
@@ -169,7 +170,13 @@ public class PuzzleBoardView : MonoBehaviour
     /// <summary>블록 타입에 해당하는 히어로의 직업 아이콘을 BlockView에 적용.</summary>
     private void ApplyClassIcon(BlockView view, BlockType type)
     {
-        if (_party == null || view == null) return;
+        if (view == null) return;
+        if (_party == null)
+        {
+            view.SetClassIcon(HeroClass.None);
+            return;
+        }
+
         var hero = _party.GetHeroByColor(type);
         view.SetClassIcon(hero?.HeroClass ?? HeroClass.None);
     }
@@ -319,10 +326,13 @@ public class PuzzleBoardView : MonoBehaviour
 
     private void OnMatchFound(MatchFoundEvent evt)
     {
+        var preserved = evt.PreservedSkillBlockCells;
         foreach (var match in evt.Matches)
         {
             foreach (var (col, row) in match.Positions)
             {
+                if (preserved != null && preserved.Contains((col, row))) continue;
+
                 var view = _blockViews[col, row];
                 if (view != null)
                 {
@@ -337,6 +347,19 @@ public class PuzzleBoardView : MonoBehaviour
 
     private void OnGravityRefill(GravityRefillEvent evt)
     {
+        if (evt.PreGravityClearedCells != null)
+        {
+            foreach (var (col, row) in evt.PreGravityClearedCells)
+            {
+                var v = _blockViews[col, row];
+                if (v == null) continue;
+                var captured = v;
+                v.AnimateDestroy(Constants.DESTROY_ANIM_DURATION,
+                    () => ReturnToPool(captured)).Forget();
+                _blockViews[col, row] = null;
+            }
+        }
+
         foreach (var move in evt.GravityMoves)
         {
             var view = _blockViews[move.Col, move.FromRow];
@@ -387,6 +410,7 @@ public class PuzzleBoardView : MonoBehaviour
             if (view == null) continue;
 
             view.Setup(BlockType.Disabled, col, row);
+            ApplyClassIcon(view, BlockType.Disabled);
             view.SetWorldSize(_blockWorldSize);
         }
     }
@@ -400,6 +424,7 @@ public class PuzzleBoardView : MonoBehaviour
 
             var type = _board.GetBlock(col, row);
             view.Setup(type, col, row);
+            ApplyClassIcon(view, type);
             view.SetWorldSize(_blockWorldSize);
             view.AnimateReshuffle().Forget();
         }

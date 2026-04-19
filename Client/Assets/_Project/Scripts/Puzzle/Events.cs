@@ -10,14 +10,19 @@ public struct MatchFoundEvent
 {
     public List<MatchResult> Matches;
     public int ComboStep;
-    public BlockType PrimaryColor;  // 뷰 이펙트용 (하위 호환 유지)
     public int BlocksMatchedInStep;
+
+    /// <summary>이번 클리어에서 제거하지 않고 남기는 셀(예: 방금 생성된 고유 스킬 블록). 뷰 파괴 연출에서 제외한다.</summary>
+    public List<(int col, int row)> PreservedSkillBlockCells;
 }
 
 public struct GravityRefillEvent
 {
     public List<BlockMove> GravityMoves;
     public List<BlockMove> RefillMoves;
+
+    /// <summary>매치 이벤트 없이 보드만 비워진 칸(예: 고유 스킬 십자 파괴). 중력 처리 전에 뷰 파괴 연출용.</summary>
+    public List<(int col, int row)> PreGravityClearedCells;
 }
 
 /// <summary>
@@ -75,8 +80,8 @@ public struct BoardReshuffleEvent
 }
 
 /// <summary>
-/// 2성 히어로의 4매칭 이상 달성 시 고유 스킬 블록이 생성되었을 때 발행.
-/// PuzzleBoardView가 구독하여 BlockView에 특수 이펙트를 활성화한다.
+/// 4개 이상 매칭으로 2성 특수 블록이 생성될 때 발행.
+/// PuzzleBoardView가 구독하여 해당 BlockView에 스킬 이펙트를 활성화한다.
 /// </summary>
 public struct SkillBlockCreatedEvent
 {
@@ -86,7 +91,7 @@ public struct SkillBlockCreatedEvent
 }
 
 /// <summary>
-/// 유저가 특수 스킬 블록을 탭했을 때 발행.
+/// 2성 특수 블록을 유저가 탭했을 때 발행.
 /// BattleManager가 구독하여 십자 파괴 + UniqueSkill 발동을 처리한다.
 /// </summary>
 public struct SkillBlockTappedEvent

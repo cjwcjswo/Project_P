@@ -44,7 +44,17 @@ public class BlockView : MonoBehaviour
     [Tooltip("HeroClass별 아이콘 스프라이트 매핑.")]
     [SerializeField] private List<ClassIconEntry> _iconsByClass = new();
 
+    [Header("Decoration scale")]
+    [Tooltip("블록 월드 크기 대비 클래스 아이콘 최대 변 길이 비율.")]
+    [SerializeField] [Range(0.05f, 1f)] private float _classIconFillRatio = 0.42f;
+
+    [Tooltip("스킬 블록 이펙트: (값 × blockWorldSize / 부모 스케일) × 프리팹 기본 localScale. 부모 스케일 변화에 맞춰 월드 크기를 안정화.")]
+    [SerializeField] private float _skillEffectScaleMul = 1f;
+
     private readonly Dictionary<BlockType, Sprite> _spriteByType = new();
+
+    private Vector3 _defaultClassIconLocalScale = Vector3.one;
+    private Vector3 _defaultSkillEffectLocalScale = Vector3.one;
 
     // 매핑/스프라이트 미지정 시에만 사용하는 임시 색상
     private static readonly Dictionary<BlockType, Color> BlockColors = new()
@@ -64,6 +74,15 @@ public class BlockView : MonoBehaviour
     private void Awake()
     {
         BuildSpriteCache();
+        CacheDecorationLocalScales();
+    }
+
+    private void CacheDecorationLocalScales()
+    {
+        if (_classIconRenderer != null)
+            _defaultClassIconLocalScale = _classIconRenderer.transform.localScale;
+        if (_skillBlockEffect != null)
+            _defaultSkillEffectLocalScale = _skillBlockEffect.transform.localScale;
     }
 
 #if UNITY_EDITOR
@@ -163,6 +182,46 @@ public class BlockView : MonoBehaviour
 
         float scale = targetWorldSize / baseSize;
         transform.localScale = new Vector3(scale, scale, 1f);
+        RefreshDecorationScales(targetWorldSize);
+    }
+
+    /// <summary>
+    /// 루트 스케일 변경 후 클래스 아이콘·스킬 이펙트 localScale을 정리한다.
+    /// (풀 재사용, Disabled 타입 전환, DOTween 중단 등으로 깨진 비율 방지)
+    /// </summary>
+    private void RefreshDecorationScales(float blockWorldSize)
+    {
+        float parentS = Mathf.Abs(transform.localScale.x);
+        if (parentS < 1e-5f) parentS = 1e-5f;
+
+        if (_classIconRenderer != null)
+        {
+            _classIconRenderer.transform.DOKill(false);
+            if (!_classIconRenderer.gameObject.activeSelf || _classIconRenderer.sprite == null)
+            {
+                _classIconRenderer.transform.localScale = _defaultClassIconLocalScale;
+            }
+            else
+            {
+                var iconBounds = _classIconRenderer.sprite.bounds.size;
+                float iconMax = Mathf.Max(iconBounds.x, iconBounds.y);
+                if (iconMax > 1e-5f)
+                {
+                    float targetIconWorld = blockWorldSize * _classIconFillRatio;
+                    float m = targetIconWorld / (parentS * iconMax);
+                    _classIconRenderer.transform.localScale = _defaultClassIconLocalScale * m;
+                }
+                else
+                    _classIconRenderer.transform.localScale = _defaultClassIconLocalScale;
+            }
+        }
+
+        if (_skillBlockEffect != null)
+        {
+            _skillBlockEffect.transform.DOKill(false);
+            float k = _skillEffectScaleMul * blockWorldSize / parentS;
+            _skillBlockEffect.transform.localScale = _defaultSkillEffectLocalScale * k;
+        }
     }
 
     public void UpdatePosition(int col, int row)

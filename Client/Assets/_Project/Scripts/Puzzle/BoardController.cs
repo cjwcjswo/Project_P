@@ -67,6 +67,15 @@ public class BoardController
                 .Distinct()
                 .ToList();
 
+            var preservedSkillCells = new List<(int col, int row)>();
+            // 4매칭 이상 시 특수 블록: 플레이어 스왑 첫 스텝에서만 — 스폰 칸은 매치 클리어·파괴 연출에서 제외
+            if (combo == 1)
+            {
+                preservedSkillCells = TryCreateSkillBlocks(matches, c2, r2);
+                foreach (var cell in preservedSkillCells)
+                    clearPositions.Remove(cell);
+            }
+
             int blocksInStep = clearPositions.Count;
             totalBlocks += blocksInStep;
 
@@ -81,14 +90,12 @@ public class BoardController
             // CascadeCompleteEvent용 누적 데이터 갱신
             AccumulateColorData(matches, combo, colorData);
 
-            // 4매칭 이상 시 특수 블록 생성 (2성 히어로)
-            TryCreateSkillBlocks(matches);
-
             EventBus.Publish(new MatchFoundEvent
             {
-                Matches = matches,
-                ComboStep = combo,
-                BlocksMatchedInStep = blocksInStep
+                Matches                  = matches,
+                ComboStep                = combo,
+                BlocksMatchedInStep      = blocksInStep,
+                PreservedSkillBlockCells = preservedSkillCells
             });
 
             _board.ClearBlocks(clearPositions);
@@ -158,7 +165,19 @@ public class BoardController
         await UniTask.Delay(TimeSpan.FromSeconds(Constants.FALL_ANIM_DURATION));
 
         var matches = _matcher.FindMatches(_board);
-        if (matches.Count == 0) return;
+        if (matches.Count == 0)
+        {
+            EventBus.Publish(new CascadeCompleteEvent
+            {
+                TotalCombo           = 0,
+                TotalBlocksMatched   = 0,
+                AllMatches           = new List<MatchResult>(),
+                ColorBreakdown       = new List<ColorMatchData>()
+            });
+            await ResolveDeadlockAsync();
+            EventBus.Publish(new BoardStabilizedEvent());
+            return;
+        }
 
         int combo = 0;
         int totalBlocks = 0;
@@ -191,9 +210,10 @@ public class BoardController
 
             EventBus.Publish(new MatchFoundEvent
             {
-                Matches = matches,
-                ComboStep = combo,
-                BlocksMatchedInStep = blocksInStep
+                Matches                  = matches,
+                ComboStep                = combo,
+                BlocksMatchedInStep      = blocksInStep,
+                PreservedSkillBlockCells = new List<(int col, int row)>()
             });
 
             _board.ClearBlocks(clearPositions);
@@ -293,11 +313,13 @@ public class BoardController
 
     /// <summary>
     /// 매치 결과에서 4개 이상 매칭된 색상의 히어로가 2성 이상이면 특수 블록을 생성한다.
-    /// 특수 블록 위치: 매칭된 포지션들의 중심 좌표.
+    /// 스왑 목표 칸이 해당 매치에 포함되면 그 칸에, 아니면 매칭 영역 중심에 둔다.
+    /// 반환: 클리어에서 제외해야 할 좌표(실제로 스킬 블록이 생긴 칸만).
     /// </summary>
-    private void TryCreateSkillBlocks(List<MatchResult> matches)
+    private List<(int col, int row)> TryCreateSkillBlocks(List<MatchResult> matches, int swapTargetCol, int swapTargetRow)
     {
-        if (_party == null) return;
+        var reserved = new List<(int col, int row)>();
+        if (_party == null) return reserved;
 
         foreach (var match in matches)
         {
@@ -307,24 +329,36 @@ public class BoardController
             if (hero == null) continue;
             if (hero.Grade < 2 || hero.UniqueSkill == null) continue;
 
-            // 매칭 포지션들의 중심(floor) 좌표 계산
-            int sumCol = 0, sumRow = 0;
-            foreach (var (c, r) in match.Positions)
+            int spawnCol;
+            int spawnRow;
+            if (match.Positions.Contains((swapTargetCol, swapTargetRow)))
             {
-                sumCol += c;
-                sumRow += r;
+                spawnCol = swapTargetCol;
+                spawnRow = swapTargetRow;
             }
-            int centerCol = sumCol / match.Positions.Count;
-            int centerRow = sumRow / match.Positions.Count;
+            else
+            {
+                int sumCol = 0, sumRow = 0;
+                foreach (var (c, r) in match.Positions)
+                {
+                    sumCol += c;
+                    sumRow += r;
+                }
 
-            // 특수 블록 등록 및 이벤트 발행
-            _board.SetSkillBlock(centerCol, centerRow);
+                spawnCol = sumCol / match.Positions.Count;
+                spawnRow = sumRow / match.Positions.Count;
+            }
+
+            _board.SetSkillBlock(spawnCol, spawnRow);
+            reserved.Add((spawnCol, spawnRow));
             EventBus.Publish(new SkillBlockCreatedEvent
             {
                 Color = match.Type,
-                Col   = centerCol,
-                Row   = centerRow
+                Col   = spawnCol,
+                Row   = spawnRow
             });
         }
+
+        return reserved;
     }
 }

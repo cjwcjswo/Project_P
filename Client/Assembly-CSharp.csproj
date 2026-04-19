@@ -112,6 +112,7 @@
     <Compile Include="Assets\_Project\Scripts\Data\UserDataDTO.cs" />
     <Compile Include="Assets\_Project\Scripts\Puzzle\Board.cs" />
     <Compile Include="Assets\_Project\Scripts\Puzzle\ComboCalculator.cs" />
+    <Compile Include="Assets\_Project\Scripts\UI\CutInView.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />

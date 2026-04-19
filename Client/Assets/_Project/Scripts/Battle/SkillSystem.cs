@@ -26,7 +26,7 @@ public class SkillSystem
         if (hero == null || hero.UniqueSkill == null) return;
         var effect = DamageCalculator.Calculate(
             hero.UniqueSkill, hero.MappedColor,
-            blockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
+            totalBlockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
         ExecuteSkill(effect, hero);
     }
 
@@ -38,7 +38,7 @@ public class SkillSystem
         if (hero == null || hero.UltimateSkill == null) return;
         var effect = DamageCalculator.Calculate(
             hero.UltimateSkill, hero.MappedColor,
-            blockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
+            totalBlockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
         ExecuteSkill(effect, hero);
     }
 

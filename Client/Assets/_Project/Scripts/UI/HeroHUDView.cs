@@ -71,6 +71,12 @@ public class HeroHUDView : MonoBehaviour
 
         if (!hasUltimate) return;
 
+        // 궁극기 링 Image가 형제 순서상 초상화 Button 위에 있어 레이캐스트를 가로채지 않도록 한다.
+        if (_ultGaugeFill != null)
+            _ultGaugeFill.raycastTarget = false;
+
+        DisableRaycastsUnderUltReadyEffect();
+
         // 궁극기 게이지 충전 (자기 heroIndex 필터링)
         ultManager.OnGaugeChanged += (idx, cur, max) =>
         {
@@ -84,6 +90,7 @@ public class HeroHUDView : MonoBehaviour
         {
             if (idx != _heroIndex) return;
             _ultReadyEffect.SetActive(true);
+            DisableRaycastsUnderUltReadyEffect();
             _portraitButton.interactable = true;
             _ultGaugeFill.DOColor(new Color(1f, 0.6f, 0f), 0.5f)
                 .SetLoops(-1, LoopType.Yoyo);
@@ -98,6 +105,16 @@ public class HeroHUDView : MonoBehaviour
             _portraitButton.interactable = false;
             _ultGaugeFill.DOKill();
             _ultGaugeFill.color = Color.white;
+            // DOKill이 Activate 직후 시작된 DOFillAmount(0)까지 취소하므로 Fill을 즉시 0으로 맞춘다.
+            _ultGaugeFill.fillAmount = 0f;
         });
+    }
+
+    /// <summary>Ready 이펙트 하위 UI Graphic이 버튼 클릭을 삼키지 않도록 한다.</summary>
+    private void DisableRaycastsUnderUltReadyEffect()
+    {
+        if (_ultReadyEffect == null) return;
+        foreach (var g in _ultReadyEffect.GetComponentsInChildren<Graphic>(true))
+            g.raycastTarget = false;
     }
 }

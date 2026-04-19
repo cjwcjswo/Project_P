@@ -42,20 +42,20 @@ public class CutInView : MonoBehaviour
         _canvasGroup.alpha = 0f;
         gameObject.SetActive(true);
 
-        // 슬라이드 인 + 페이드 인
-        var seq = DOTween.Sequence();
-        seq.Join(_illustrationRect.DOAnchorPosX(endX, _slideDuration).SetEase(Ease.OutCubic));
-        seq.Join(_canvasGroup.DOFade(0.9f, _slideDuration));
-        await seq.ToUniTask();
+        // 슬라이드 인 + 페이드 인 (병렬)
+        await UniTask.WhenAll(
+            _illustrationRect.DOAnchorPosX(endX, _slideDuration).SetEase(Ease.OutCubic).ToUniTask(),
+            _canvasGroup.DOFade(0.9f, _slideDuration).ToUniTask()
+        );
 
         // 홀드
         await UniTask.Delay(System.TimeSpan.FromSeconds(_holdDuration));
 
-        // 슬라이드 아웃 + 페이드 아웃
-        var seqOut = DOTween.Sequence();
-        seqOut.Join(_illustrationRect.DOAnchorPosX(screenWidth, _fadeOutDuration).SetEase(Ease.InCubic));
-        seqOut.Join(_canvasGroup.DOFade(0f, _fadeOutDuration));
-        await seqOut.ToUniTask();
+        // 슬라이드 아웃 + 페이드 아웃 (병렬)
+        await UniTask.WhenAll(
+            _illustrationRect.DOAnchorPosX(screenWidth, _fadeOutDuration).SetEase(Ease.InCubic).ToUniTask(),
+            _canvasGroup.DOFade(0f, _fadeOutDuration).ToUniTask()
+        );
 
         gameObject.SetActive(false);
     }

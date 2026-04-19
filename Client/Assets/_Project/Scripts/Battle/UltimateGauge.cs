@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// </summary>
 public class UltimateGaugeManager
 {
-    public const int MAX_GAUGE = 100;
+    public const int MAX_GAUGE = 10;
 
     private readonly Dictionary<int, int> _gauges = new(); // partyIndex → gauge
     private readonly Dictionary<int, int> _grades = new(); // partyIndex → grade
@@ -58,9 +58,9 @@ public class UltimateGaugeManager
     }
 
     /// <summary>
-    /// 특정 히어로의 궁극기 발동. 게이지 소모.
+    /// 특정 히어로의 궁극기 발동. 게이지 소모. 보드 블록 파괴는 하지 않으며 SkillSystem이 전투 효과만 처리한다.
     /// </summary>
-    public UltimateResult Activate(int heroIndex, int heroAttack, Board board)
+    public UltimateResult Activate(int heroIndex, int heroAttack)
     {
         if (!CanActivate(heroIndex))
             return new UltimateResult { IsActivated = false, Damage = 0, DestroyedPositions = null };
@@ -68,35 +68,15 @@ public class UltimateGaugeManager
         _gauges[heroIndex] = 0;
         OnGaugeChanged?.Invoke(heroIndex, 0, MAX_GAUGE);
 
-        var positions = GetRandomBlockPositions(board, 10);
-        OnUltimateActivated?.Invoke(heroIndex, 0, positions);
+        var empty = new List<(int, int)>();
+        OnUltimateActivated?.Invoke(heroIndex, 0, empty);
 
         return new UltimateResult
         {
             IsActivated        = true,
-            Damage             = 0,   // 실제 데미지는 SkillSystem이 처리
-            DestroyedPositions = positions
+            Damage             = 0,
+            DestroyedPositions = empty
         };
-    }
-
-    private List<(int col, int row)> GetRandomBlockPositions(Board board, int count)
-    {
-        var candidates = new List<(int, int)>();
-        for (int col = 0; col < board.Width; col++)
-            for (int row = 0; row < board.Height; row++)
-                if (board.GetBlock(col, row) != BlockType.None)
-                    candidates.Add((col, row));
-
-        var rand = new Random();
-        var result = new List<(int, int)>();
-        int pick = Math.Min(count, candidates.Count);
-        for (int i = 0; i < pick; i++)
-        {
-            int idx = rand.Next(candidates.Count);
-            result.Add(candidates[idx]);
-            candidates.RemoveAt(idx);
-        }
-        return result;
     }
 }
 

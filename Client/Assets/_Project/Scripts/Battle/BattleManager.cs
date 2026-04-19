@@ -169,7 +169,7 @@ public class BattleManager
         if (hero == null || hero.IsDead) return;
         if (hero.Grade < 3 || hero.UltimateSkill == null) return;
 
-        var result = _ultManager.Activate(heroIndex, hero.Attack, _boardController.Board);
+        var result = _ultManager.Activate(heroIndex, hero.Attack);
         // 게이지 미충전 시 취소
         if (!result.IsActivated) return;
 
@@ -181,21 +181,8 @@ public class BattleManager
                 await _cutInView.PlayAsync(illustration);
         }
 
-        // UltimateSkill 발동 (SkillSystem 경유)
+        // UltimateSkill 발동 (SkillSystem 경유). 보드 퍼즐에는 영향 없음.
         _skillSystem.ExecuteUltimateSkill(hero);
-
-        // 보드 블록 파괴 + 캐스케이드
-        if (result.DestroyedPositions != null && result.DestroyedPositions.Count > 0)
-        {
-            _boardController.Board.ClearBlocks(result.DestroyedPositions);
-            EventBus.Publish(new GravityRefillEvent
-            {
-                GravityMoves = _boardController.Board.ApplyGravity(),
-                RefillMoves  = _boardController.Board.Refill()
-            });
-            await UniTask.Delay(TimeSpan.FromSeconds(0.3f));
-            await _boardController.ProcessCascadeAsync();
-        }
     }
 
     public void SetCutInView(CutInView cutInView)
@@ -342,8 +329,9 @@ public class BattleManager
         var destroyed = _boardController.Board.ClearCrossPattern(evt.Col, evt.Row);
         EventBus.Publish(new GravityRefillEvent
         {
-            GravityMoves = _boardController.Board.ApplyGravity(),
-            RefillMoves  = _boardController.Board.Refill()
+            PreGravityClearedCells = destroyed,
+            GravityMoves           = _boardController.Board.ApplyGravity(),
+            RefillMoves            = _boardController.Board.Refill()
         });
 
         // 2. UniqueSkill 즉시 발동
