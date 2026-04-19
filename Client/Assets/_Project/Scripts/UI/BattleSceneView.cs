@@ -1,6 +1,6 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using DG.Tweening;
 
 /// <summary>
 /// 전투 월드 공간의 히어로/적 스프라이트 오브젝트를 관리.
@@ -18,7 +18,14 @@ public class BattleSceneView : MonoBehaviour
     [SerializeField] private Transform[]     _enemySpawnPoints;  // 웨이브 적 수만큼
 
     [Header("Floating Text")]
-    [SerializeField] private FloatingTextView _floatingTextPrefab;
+    [SerializeField] private FloatingTextView _damageFloatingTextPrefab;
+    [Tooltip("비우면 데미지 프리팹과 동일(공용 풀). 별도 프리팹이면 스킬 전용 연출을 줄 수 있음.")]
+    [SerializeField] private FloatingTextView _skillFloatingTextPrefab;
+
+    [Header("Cut-in")]
+    [SerializeField] private CutInView _cutInView;
+
+    public CutInView CutIn => _cutInView;
 
     // ── 런타임 상태 ───────────────────────────────────────────────────────
 
@@ -29,7 +36,8 @@ public class BattleSceneView : MonoBehaviour
 
     private readonly Dictionary<int, HeroEntityView>  _heroViews  = new();
     private readonly Dictionary<int, EnemyEntityView> _enemyViews = new();
-    private readonly Queue<FloatingTextView>           _floatingPool = new();
+    private readonly Queue<FloatingTextView> _damageFloatingPool = new();
+    private readonly Queue<FloatingTextView> _skillFloatingPool  = new();
 
     // ── 초기화 ────────────────────────────────────────────────────────────
 
@@ -193,41 +201,73 @@ public class BattleSceneView : MonoBehaviour
 
         // 스킬 이름 플로팅 텍스트
         if (srcHeroView != null)
-            SpawnSkillText(effect.SkillName, effect.SourceColor, srcHeroView.WorldPosition);
+            SpawnSkillText(effect.SkillName, srcHeroView.WorldPosition);
     }
 
     // ── 플로팅 텍스트 풀 ──────────────────────────────────────────────────
 
-    private FloatingTextView GetFromFloatingPool()
+    private FloatingTextView SkillFloatingPrefab =>
+        _skillFloatingTextPrefab != null ? _skillFloatingTextPrefab : _damageFloatingTextPrefab;
+
+    private bool UseSharedFloatingPools =>
+        _damageFloatingTextPrefab == null ||
+        _skillFloatingTextPrefab == null ||
+        _skillFloatingTextPrefab == _damageFloatingTextPrefab;
+
+    private FloatingTextView RentDamageFloating()
+    {
+        if (_damageFloatingTextPrefab == null) return null;
+        return RentFromPool(_damageFloatingPool, _damageFloatingTextPrefab, ReturnDamageFloating);
+    }
+
+    private FloatingTextView RentSkillFloating()
+    {
+        var prefab = SkillFloatingPrefab;
+        if (prefab == null) return null;
+        if (UseSharedFloatingPools)
+            return RentFromPool(_damageFloatingPool, _damageFloatingTextPrefab, ReturnDamageFloating);
+        return RentFromPool(_skillFloatingPool, _skillFloatingTextPrefab, ReturnSkillFloating);
+    }
+
+    private FloatingTextView RentFromPool(
+        Queue<FloatingTextView> pool,
+        FloatingTextView prefab,
+        Action<FloatingTextView> onRelease)
     {
         FloatingTextView view;
-        if (_floatingPool.Count > 0)
-        {
-            view = _floatingPool.Dequeue();
-        }
+        if (pool.Count > 0)
+            view = pool.Dequeue();
         else
         {
-            view = Instantiate(_floatingTextPrefab, transform);
-            view.OnRelease = ReturnToFloatingPool;
+            view = Instantiate(prefab, transform);
+            view.OnRelease = onRelease;
         }
+
         return view;
     }
 
-    private void ReturnToFloatingPool(FloatingTextView view)
+    private void ReturnDamageFloating(FloatingTextView view)
     {
-        _floatingPool.Enqueue(view);
+        _damageFloatingPool.Enqueue(view);
+    }
+
+    private void ReturnSkillFloating(FloatingTextView view)
+    {
+        _skillFloatingPool.Enqueue(view);
     }
 
     private void SpawnDamageText(int damage, Vector3 worldPos)
     {
-        if (_floatingTextPrefab == null) return;
-        GetFromFloatingPool().Show(damage.ToString(), Color.red, worldPos);
+        var v = RentDamageFloating();
+        if (v == null) return;
+        v.Show(damage.ToString(), worldPos);
     }
 
-    private void SpawnSkillText(string skillName, BlockType sourceColor, Vector3 worldPos)
+    private void SpawnSkillText(string skillName, Vector3 worldPos)
     {
-        if (_floatingTextPrefab == null) return;
-        GetFromFloatingPool().Show(skillName, GetBlockColor(sourceColor), worldPos);
+        var v = RentSkillFloating();
+        if (v == null) return;
+        v.Show(skillName, worldPos);
     }
 
     // ── 유틸 ──────────────────────────────────────────────────────────────

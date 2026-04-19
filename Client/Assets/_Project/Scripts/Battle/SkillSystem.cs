@@ -19,6 +19,30 @@ public class SkillSystem
     }
 
     /// <summary>
+    /// 2성 특수 블록 탭 시 해당 히어로의 UniqueSkill을 즉시 발동.
+    /// </summary>
+    public void ExecuteUniqueSkill(HeroState hero)
+    {
+        if (hero == null || hero.UniqueSkill == null) return;
+        var effect = DamageCalculator.Calculate(
+            hero.UniqueSkill, hero.MappedColor,
+            blockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
+        ExecuteSkill(effect, hero);
+    }
+
+    /// <summary>
+    /// 3성 궁극기 발동 (UltimateSkill 기반).
+    /// </summary>
+    public void ExecuteUltimateSkill(HeroState hero)
+    {
+        if (hero == null || hero.UltimateSkill == null) return;
+        var effect = DamageCalculator.Calculate(
+            hero.UltimateSkill, hero.MappedColor,
+            blockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
+        ExecuteSkill(effect, hero);
+    }
+
+    /// <summary>
     /// 캐스케이드 결과로부터 색상별 개별 스킬 발동.
     /// </summary>
     public void ExecuteFromCascade(List<ColorMatchData> colorBreakdown, ComboCalculator combo)
@@ -29,7 +53,7 @@ public class SkillSystem
             if (hero == null) continue;
 
             float multiplier = combo.GetMultiplierAt(data.ComboAtTrigger);
-            var effect = DamageCalculator.Calculate(hero.Skill, data.Color, data.BlockCount, multiplier, hero.Attack);
+            var effect = DamageCalculator.Calculate(hero.MatchSkill, data.Color, data.BlockCount, multiplier, hero.Attack);
             ExecuteSkill(effect, hero);
         }
     }

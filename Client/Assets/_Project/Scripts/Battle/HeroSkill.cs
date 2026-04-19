@@ -22,15 +22,15 @@ public enum TargetScope
 }
 
 /// <summary>
-/// 하위 호환용 — HeroDataDTO.skillType 파싱 및 DefaultSkill 매핑에 사용.
+/// GDD 1절 직업군. HeroData.json Class 필드와 대응.
 /// </summary>
-public enum SkillType
+public enum HeroClass
 {
-    SingleAttack,
-    AoEAttack,
-    Heal,
-    Shield,
-    EnhancedAttack
+    None,
+    Warrior,
+    Mage,
+    Assassin,
+    Healer
 }
 
 /// <summary>
@@ -56,53 +56,5 @@ public class HeroSkill
         MaxTargetCount = maxTargetCount;
         Name = name;
         StatusEffects = statusEffects ?? new List<StatusEffectData>();
-    }
-
-    /// <summary>
-    /// 하위 호환 생성자 — 기존 SkillType 기반 코드(DefaultSkill, HeroFactory legacy)에서 사용.
-    /// </summary>
-    public HeroSkill(SkillType legacyType, float baseValuePerBlock, string name, float stunDuration = 0f)
-    {
-        Name = name;
-        BaseMultiplier = baseValuePerBlock;
-        StatusEffects = new List<StatusEffectData>();
-
-        switch (legacyType)
-        {
-            case SkillType.SingleAttack:
-            case SkillType.EnhancedAttack:
-                ActionType = ActionType.Attack;
-                TargetScope = TargetScope.Single;
-                MaxTargetCount = 1;
-                break;
-            case SkillType.AoEAttack:
-                ActionType = ActionType.Attack;
-                TargetScope = TargetScope.Multi;
-                MaxTargetCount = 99;
-                if (stunDuration > 0f)
-                    StatusEffects.Add(new StatusEffectData
-                    {
-                        EffectType = "Stun",
-                        Value = 0f,
-                        Duration = stunDuration,
-                        Probability = 1.0f
-                    });
-                break;
-            case SkillType.Heal:
-                ActionType = ActionType.Heal;
-                TargetScope = TargetScope.Single;
-                MaxTargetCount = 1;
-                break;
-            case SkillType.Shield:
-                ActionType = ActionType.Shield;
-                TargetScope = TargetScope.Single;
-                MaxTargetCount = 1;
-                break;
-            default:
-                ActionType = ActionType.Attack;
-                TargetScope = TargetScope.Single;
-                MaxTargetCount = 1;
-                break;
-        }
     }
 }

@@ -53,5 +53,61 @@
     "MaxTargetCount": 1,
     "BaseMultiplier": 2.5,
     "StatusEffects": []
+  },
+  {
+    "Id": 5006,
+    "DisplayName": "심판의 강타",
+    "EffectPrefabPath": "Effects/Skills/JudgeStrike",
+    "ActionType": "Attack",
+    "TargetScope": "Single",
+    "MaxTargetCount": 1,
+    "BaseMultiplier": 3.5,
+    "StatusEffects": [
+      { "EffectType": "Stun", "Value": 0.0, "Duration": 2.0, "Probability": 0.5 }
+    ]
+  },
+  {
+    "Id": 5007,
+    "DisplayName": "성스러운 빛",
+    "EffectPrefabPath": "Effects/Skills/HolyLight",
+    "ActionType": "Heal",
+    "TargetScope": "All",
+    "MaxTargetCount": 0,
+    "BaseMultiplier": 1.5,
+    "StatusEffects": []
+  },
+  {
+    "Id": 5008,
+    "DisplayName": "절대 방어",
+    "EffectPrefabPath": "Effects/Skills/AbsoluteShield",
+    "ActionType": "Shield",
+    "TargetScope": "All",
+    "MaxTargetCount": 0,
+    "BaseMultiplier": 2.5,
+    "StatusEffects": []
+  },
+  {
+    "Id": 5009,
+    "DisplayName": "신의 철퇴",
+    "EffectPrefabPath": "Effects/Skills/DivineMace",
+    "ActionType": "Attack",
+    "TargetScope": "All",
+    "MaxTargetCount": 0,
+    "BaseMultiplier": 4.0,
+    "StatusEffects": [
+      { "EffectType": "DefDown", "Value": 0.3, "Duration": 8.0, "Probability": 1.0 }
+    ]
+  },
+  {
+    "Id": 5010,
+    "DisplayName": "불굴의 성벽",
+    "EffectPrefabPath": "Effects/Skills/IronWall",
+    "ActionType": "Buff",
+    "TargetScope": "All",
+    "MaxTargetCount": 0,
+    "BaseMultiplier": 0.5,
+    "StatusEffects": [
+      { "EffectType": "AtkUp", "Value": 0.3, "Duration": 10.0, "Probability": 1.0 }
+    ]
   }
 ]

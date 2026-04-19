@@ -68,9 +68,8 @@ public class BattleSceneManager : MonoBehaviour
                 continue;
             }
 
-            var skillData = skillRepo.GetById(heroData.SkillId);
-            int level     = dto.Level > 0 ? dto.Level : 1;
-            heroes.Add(HeroFactory.Create(heroData, skillData, level, partyIndex: i));
+            int level = dto.Level > 0 ? dto.Level : 1;
+            heroes.Add(HeroFactory.Create(heroData, skillRepo, level, partyIndex: i));
         }
 
         if (heroes.Count == 0)
@@ -85,10 +84,10 @@ public class BattleSceneManager : MonoBehaviour
         var activeColors = party.GetActiveColors();
         var board        = new Board();
         board.Initialize(activeColors);
-        var controller = new BoardController(board, activeColors);
+        var controller = new BoardController(board, activeColors, party);
         ServiceLocator.Register(controller);
 
-        _puzzleBoardView.Initialize(controller);
+        _puzzleBoardView.Initialize(controller, party);
 
         // ── 4. 전투 시작 ──────────────────────────────────────────────────
         var setupData  = new BattleSetupData(stageData, monsterRepo);
@@ -103,6 +102,7 @@ public class BattleSceneManager : MonoBehaviour
             ServiceLocator.Get<SkillSystem>(),
             _battleManager.Targeting);
         _battleSceneView.BindBattleManager(_battleManager);
+        _battleManager.SetCutInView(_battleSceneView.CutIn);
 
         Debug.Log($"[BattleSceneManager] Battle initialized. StageId={stageId}");
     }

@@ -10,6 +10,7 @@ public class UltimateGaugeManager
     public const int MAX_GAUGE = 100;
 
     private readonly Dictionary<int, int> _gauges = new(); // partyIndex → gauge
+    private readonly Dictionary<int, int> _grades = new(); // partyIndex → grade
 
     public event Action<int, int, int> OnGaugeChanged;        // (heroIndex, current, max)
     public event Action<int> OnUltimateReady;                  // (heroIndex)
@@ -18,8 +19,12 @@ public class UltimateGaugeManager
     public void Initialize(HeroParty party)
     {
         _gauges.Clear();
+        _grades.Clear();
         foreach (var hero in party.Heroes)
+        {
             _gauges[hero.PartyIndex] = 0;
+            _grades[hero.PartyIndex] = hero.Grade;
+        }
     }
 
     public int GetGauge(int heroIndex) =>
@@ -39,6 +44,9 @@ public class UltimateGaugeManager
             int heroIndex = HeroColorMap.GetHeroIndex(data.Color);
             if (heroIndex < 0 || !_gauges.ContainsKey(heroIndex)) continue;
 
+            // 3성 미만 히어로는 궁극기 게이지 충전 불가
+            if (_grades.TryGetValue(heroIndex, out int grade) && grade < 3) continue;
+
             int before = _gauges[heroIndex];
             _gauges[heroIndex] = Math.Min(MAX_GAUGE, before + data.BlockCount);
 
@@ -55,19 +63,18 @@ public class UltimateGaugeManager
     public UltimateResult Activate(int heroIndex, int heroAttack, Board board)
     {
         if (!CanActivate(heroIndex))
-            return new UltimateResult { Damage = 0, DestroyedPositions = null };
+            return new UltimateResult { IsActivated = false, Damage = 0, DestroyedPositions = null };
 
         _gauges[heroIndex] = 0;
         OnGaugeChanged?.Invoke(heroIndex, 0, MAX_GAUGE);
 
-        int damage = heroAttack * 3;
         var positions = GetRandomBlockPositions(board, 10);
-
-        OnUltimateActivated?.Invoke(heroIndex, damage, positions);
+        OnUltimateActivated?.Invoke(heroIndex, 0, positions);
 
         return new UltimateResult
         {
-            Damage = damage,
+            IsActivated        = true,
+            Damage             = 0,   // 실제 데미지는 SkillSystem이 처리
             DestroyedPositions = positions
         };
     }
@@ -95,6 +102,7 @@ public class UltimateGaugeManager
 
 public struct UltimateResult
 {
+    public bool IsActivated;
     public int Damage;
     public List<(int col, int row)> DestroyedPositions;
 }

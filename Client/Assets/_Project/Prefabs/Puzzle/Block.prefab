@@ -108,12 +108,12 @@ MonoBehaviour:
   _fallbackSprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
   _spritesByType:
   - Type: 1
-    Sprite: {fileID: -6079249058552409479, guid: fc86defa94cf94a4bb6bcacd9ef28b94, type: 3}
+    Sprite: {fileID: -7496966864412918062, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
   - Type: 2
-    Sprite: {fileID: 165309545091440539, guid: fc86defa94cf94a4bb6bcacd9ef28b94, type: 3}
+    Sprite: {fileID: 2360927252869429142, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
   - Type: 3
-    Sprite: {fileID: 9120726545173173297, guid: fc86defa94cf94a4bb6bcacd9ef28b94, type: 3}
+    Sprite: {fileID: 8243713229997694533, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
   - Type: 4
-    Sprite: {fileID: -1055801131, guid: fc86defa94cf94a4bb6bcacd9ef28b94, type: 3}
+    Sprite: {fileID: -4417848210644184451, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
   - Type: 5
-    Sprite: {fileID: 577199090, guid: fc86defa94cf94a4bb6bcacd9ef28b94, type: 3}
+    Sprite: {fileID: 7241460152898092619, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}

@@ -12,6 +12,21 @@ public class Board
     private List<BlockType> _activeColors;
     private static readonly Random _rand = new();
 
+    // ── 특수 블록(스킬 블록) 상태 관리 ────────────────────────────────────
+    private readonly HashSet<(int col, int row)> _skillBlocks = new();
+
+    public bool IsSkillBlock(int col, int row) => _skillBlocks.Contains((col, row));
+
+    public void SetSkillBlock(int col, int row)
+    {
+        _skillBlocks.Add((col, row));
+    }
+
+    public void RemoveSkillBlock(int col, int row)
+    {
+        _skillBlocks.Remove((col, row));
+    }
+
     public int Width  => Constants.BOARD_WIDTH;
     public int Height => Constants.BOARD_HEIGHT;
 
@@ -136,11 +151,41 @@ public class Board
 
     // ── 클리어 / 중력 / 리필 ───────────────────────────────────────────────
 
-    /// <summary>지정된 셀들을 None으로 설정.</summary>
+    /// <summary>지정된 셀들을 None으로 설정. 특수 블록 상태도 같이 제거.</summary>
     public void ClearBlocks(List<(int col, int row)> positions)
     {
         foreach (var (col, row) in positions)
+        {
             _grid[col, row] = BlockType.None;
+            _skillBlocks.Remove((col, row));
+        }
+    }
+
+    /// <summary>
+    /// 상하좌우 십자 모양 블록을 파괴한다 (2성 특수 블록 탭 발동 시).
+    /// 특수 블록 자신의 위치도 포함하여 반환.
+    /// </summary>
+    public List<(int col, int row)> ClearCrossPattern(int col, int row)
+    {
+        var positions = new List<(int col, int row)>();
+        // 자신
+        if (_grid[col, row] != BlockType.None && _grid[col, row] != BlockType.Disabled)
+            positions.Add((col, row));
+        // 상
+        if (row + 1 < Height && _grid[col, row + 1] != BlockType.Disabled)
+            positions.Add((col, row + 1));
+        // 하
+        if (row - 1 >= 0 && _grid[col, row - 1] != BlockType.Disabled)
+            positions.Add((col, row - 1));
+        // 좌
+        if (col - 1 >= 0 && _grid[col - 1, row] != BlockType.Disabled)
+            positions.Add((col - 1, row));
+        // 우
+        if (col + 1 < Width && _grid[col + 1, row] != BlockType.Disabled)
+            positions.Add((col + 1, row));
+
+        ClearBlocks(positions);
+        return positions;
     }
 
     /// <summary>
@@ -187,6 +232,10 @@ public class Board
                             });
                             _grid[col, writeRow] = _grid[col, readRow];
                             _grid[col, readRow]  = BlockType.None;
+
+                            // 특수 블록 위치도 같이 이동
+                            if (_skillBlocks.Remove((col, readRow)))
+                                _skillBlocks.Add((col, writeRow));
                         }
                         writeRow++;
                     }

@@ -17,6 +17,7 @@ public class PuzzleBoardView : MonoBehaviour
     private BlockView[,] _blockViews;
     private BoardController _controller;
     private Board _board;
+    private HeroParty _party;
 
     // 그리드 셀 "센터 간격"(월드 유닛). 블록 간 간격(보이는 gap)과 분리해서 관리한다.
     private float _cellStep;
@@ -49,10 +50,11 @@ public class PuzzleBoardView : MonoBehaviour
 
     // ── 초기화 ────────────────────────────────────────────────────────────
 
-    public void Initialize(BoardController controller)
+    public void Initialize(BoardController controller, HeroParty party = null)
     {
         _controller = controller;
         _board      = controller.Board;
+        _party      = party;
 
         CalculateLayout();
         SpawnAllBlocks();
@@ -157,9 +159,19 @@ public class PuzzleBoardView : MonoBehaviour
             {
                 var type = _board.GetBlock(col, row);
                 var pos  = GridToWorld(col, row);
-                _blockViews[col, row] = EnsureBlockViewAt(col, row, type, pos);
+                var view = EnsureBlockViewAt(col, row, type, pos);
+                _blockViews[col, row] = view;
+                ApplyClassIcon(view, type);
             }
         }
+    }
+
+    /// <summary>블록 타입에 해당하는 히어로의 직업 아이콘을 BlockView에 적용.</summary>
+    private void ApplyClassIcon(BlockView view, BlockType type)
+    {
+        if (_party == null || view == null) return;
+        var hero = _party.GetHeroByColor(type);
+        view.SetClassIcon(hero?.HeroClass ?? HeroClass.None);
     }
 
     // ── 좌표 변환 ─────────────────────────────────────────────────────────
@@ -195,6 +207,25 @@ public class PuzzleBoardView : MonoBehaviour
             var selected    = WorldToGrid(startWorld);
             if (selected == null) continue;
 
+            var (sc, sr) = selected.Value;
+
+            // 특수 블록(스킬 블록) 탭 감지: 스왑 없이 즉시 발동
+            if (_board.IsSkillBlock(sc, sr))
+            {
+                await UniTask.WaitUntil(() => _pointerPress.WasReleasedThisFrame(), cancellationToken: ct);
+                var releaseScreen = _pointerPosition.ReadValue<Vector2>();
+                var releaseWorld  = Camera.main.ScreenToWorldPoint(new Vector3(releaseScreen.x, releaseScreen.y, 0f));
+                // 드래그가 아닌 탭(이동 거리 작음)이면 발동
+                if (Vector3.Distance(startWorld, releaseWorld) < _cellStep * 0.3f)
+                {
+                    var color = _board.GetBlock(sc, sr);
+                    EventBus.Publish(new SkillBlockTappedEvent { Color = color, Col = sc, Row = sr });
+                    if (_blockViews[sc, sr] != null)
+                        _blockViews[sc, sr].SetSkillBlock(false);
+                }
+                continue;
+            }
+
             await UniTask.WaitUntil(() => _pointerPress.WasReleasedThisFrame(), cancellationToken: ct);
 
             var endScreen = _pointerPosition.ReadValue<Vector2>();
@@ -202,8 +233,7 @@ public class PuzzleBoardView : MonoBehaviour
             var dir       = GetSwapDirection(startWorld, endWorld);
             if (dir == null) continue;
 
-            var (dc, dr)  = dir.Value;
-            var (sc, sr)  = selected.Value;
+            var (dc, dr) = dir.Value;
             int tc = sc + dc, tr = sr + dr;
 
             if (tc < 0 || tc >= _board.Width || tr < 0 || tr >= _board.Height) continue;
@@ -241,6 +271,7 @@ public class PuzzleBoardView : MonoBehaviour
         EventBus.Subscribe<HeroColorRemovedEvent>(OnHeroColorRemoved);
         EventBus.Subscribe<HeroColorDisabledEvent>(OnHeroColorDisabled);
         EventBus.Subscribe<BoardReshuffleEvent>(OnBoardReshuffle);
+        EventBus.Subscribe<SkillBlockCreatedEvent>(OnSkillBlockCreated);
     }
 
     private void OnDisable()
@@ -257,6 +288,7 @@ public class PuzzleBoardView : MonoBehaviour
         EventBus.Unsubscribe<HeroColorRemovedEvent>(OnHeroColorRemoved);
         EventBus.Unsubscribe<HeroColorDisabledEvent>(OnHeroColorDisabled);
         EventBus.Unsubscribe<BoardReshuffleEvent>(OnBoardReshuffle);
+        EventBus.Unsubscribe<SkillBlockCreatedEvent>(OnSkillBlockCreated);
 
         _cts?.Cancel();
         _cts?.Dispose();
@@ -371,5 +403,11 @@ public class PuzzleBoardView : MonoBehaviour
             view.SetWorldSize(_blockWorldSize);
             view.AnimateReshuffle().Forget();
         }
+    }
+
+    private void OnSkillBlockCreated(SkillBlockCreatedEvent evt)
+    {
+        var view = _blockViews[evt.Col, evt.Row];
+        view?.SetSkillBlock(true);
     }
 }

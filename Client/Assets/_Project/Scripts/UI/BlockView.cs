@@ -26,6 +26,24 @@ public class BlockView : MonoBehaviour
     [Tooltip("BlockType별 스프라이트. 단일 Block 프리팹에서 타입만 바꿔 표현한다.")]
     [SerializeField] private List<BlockSpriteEntry> _spritesByType = new();
 
+    [Header("Skill Block")]
+    [Tooltip("2성 특수 블록 활성 시 표시할 파티클/아우라 이펙트 오브젝트.")]
+    [SerializeField] private GameObject _skillBlockEffect;
+
+    [Header("Class Icon")]
+    [Tooltip("직업 아이콘 렌더러 (자식 오브젝트).")]
+    [SerializeField] private SpriteRenderer _classIconRenderer;
+
+    [Serializable]
+    private class ClassIconEntry
+    {
+        public HeroClass Class;
+        public Sprite Sprite;
+    }
+
+    [Tooltip("HeroClass별 아이콘 스프라이트 매핑.")]
+    [SerializeField] private List<ClassIconEntry> _iconsByClass = new();
+
     private readonly Dictionary<BlockType, Sprite> _spriteByType = new();
 
     // 매핑/스프라이트 미지정 시에만 사용하는 임시 색상
@@ -78,7 +96,38 @@ public class BlockView : MonoBehaviour
         Row  = row;
         transform.localScale = Vector3.one;
         ApplyVisualForType(type);
+        _skillBlockEffect?.SetActive(false);
         gameObject.SetActive(true);
+    }
+
+    /// <summary>특수 스킬 블록 이펙트 활성/비활성 전환.</summary>
+    public void SetSkillBlock(bool isSkill)
+    {
+        _skillBlockEffect?.SetActive(isSkill);
+    }
+
+    /// <summary>직업 아이콘 설정. HeroClass.None이면 아이콘을 숨긴다.</summary>
+    public void SetClassIcon(HeroClass heroClass)
+    {
+        if (_classIconRenderer == null) return;
+
+        if (heroClass == HeroClass.None)
+        {
+            _classIconRenderer.gameObject.SetActive(false);
+            return;
+        }
+
+        foreach (var entry in _iconsByClass)
+        {
+            if (entry.Class == heroClass)
+            {
+                _classIconRenderer.sprite = entry.Sprite;
+                _classIconRenderer.gameObject.SetActive(entry.Sprite != null);
+                return;
+            }
+        }
+
+        _classIconRenderer.gameObject.SetActive(false);
     }
 
     private void ApplyVisualForType(BlockType type)

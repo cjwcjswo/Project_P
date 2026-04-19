@@ -16,6 +16,7 @@ public class BattleManager
     private UltimateGaugeManager _ultManager;
     private TargetingSystem _targeting;
     private CancellationTokenSource _cts;
+    private CutInView _cutInView;
 
     public event Action OnBattleWin;
     public event Action OnBattleLose;
@@ -50,6 +51,7 @@ public class BattleManager
 
         EventBus.Subscribe<MatchStepSkillTriggerEvent>(OnMatchStepSkillTrigger);
         EventBus.Subscribe<CascadeCompleteEvent>(OnCascadeComplete);
+        EventBus.Subscribe<SkillBlockTappedEvent>(OnSkillBlockTapped);
         _party.OnHeroDied += OnHeroDied;
         _party.OnAllDead += HandleAllHeroesDead;
 
@@ -165,24 +167,40 @@ public class BattleManager
     {
         var hero = _party.GetHeroByIndex(heroIndex);
         if (hero == null || hero.IsDead) return;
+        if (hero.Grade < 3 || hero.UltimateSkill == null) return;
 
         var result = _ultManager.Activate(heroIndex, hero.Attack, _boardController.Board);
-        if (result.Damage <= 0) return;
+        // 게이지 미충전 시 취소
+        if (!result.IsActivated) return;
 
-        var target = _targeting.GetPriorityTarget(_currentWave.AliveEnemies);
-        target?.TakeDamage(result.Damage);
+        // 컷인 연출 (설정된 경우)
+        if (_cutInView != null && !string.IsNullOrEmpty(hero.IllustrationPath))
+        {
+            var illustration = UnityEngine.Resources.Load<UnityEngine.Sprite>(hero.IllustrationPath);
+            if (illustration != null)
+                await _cutInView.PlayAsync(illustration);
+        }
 
+        // UltimateSkill 발동 (SkillSystem 경유)
+        _skillSystem.ExecuteUltimateSkill(hero);
+
+        // 보드 블록 파괴 + 캐스케이드
         if (result.DestroyedPositions != null && result.DestroyedPositions.Count > 0)
         {
             _boardController.Board.ClearBlocks(result.DestroyedPositions);
             EventBus.Publish(new GravityRefillEvent
             {
-                GravityMoves = new List<BlockMove>(),
-                RefillMoves  = new List<BlockMove>()
+                GravityMoves = _boardController.Board.ApplyGravity(),
+                RefillMoves  = _boardController.Board.Refill()
             });
             await UniTask.Delay(TimeSpan.FromSeconds(0.3f));
             await _boardController.ProcessCascadeAsync();
         }
+    }
+
+    public void SetCutInView(CutInView cutInView)
+    {
+        _cutInView = cutInView;
     }
 
     /// <summary>
@@ -312,10 +330,34 @@ public class BattleManager
         }
     }
 
+    /// <summary>
+    /// 2성 특수 블록 탭 발동: 십자 파괴 + UniqueSkill 즉시 실행.
+    /// </summary>
+    private void OnSkillBlockTapped(SkillBlockTappedEvent evt)
+    {
+        var hero = _party.GetHeroByColor(evt.Color);
+        if (hero == null || hero.IsDead) return;
+
+        // 1. 십자 모양 블록 파괴
+        var destroyed = _boardController.Board.ClearCrossPattern(evt.Col, evt.Row);
+        EventBus.Publish(new GravityRefillEvent
+        {
+            GravityMoves = _boardController.Board.ApplyGravity(),
+            RefillMoves  = _boardController.Board.Refill()
+        });
+
+        // 2. UniqueSkill 즉시 발동
+        _skillSystem.ExecuteUniqueSkill(hero);
+
+        // 3. 보드 캐스케이드 후처리 (비동기)
+        _boardController.ProcessCascadeAsync().Forget();
+    }
+
     private void Cleanup()
     {
         EventBus.Unsubscribe<MatchStepSkillTriggerEvent>(OnMatchStepSkillTrigger);
         EventBus.Unsubscribe<CascadeCompleteEvent>(OnCascadeComplete);
+        EventBus.Unsubscribe<SkillBlockTappedEvent>(OnSkillBlockTapped);
         if (_party != null)
         {
             _party.OnHeroDied -= OnHeroDied;

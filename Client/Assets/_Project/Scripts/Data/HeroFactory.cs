@@ -9,34 +9,59 @@ using UnityEngine;
 public static class HeroFactory
 {
     /// <summary>
-    /// HeroData + SkillData로 HeroState를 생성한다. GrowthStats를 레벨에 반영.
+    /// HeroData + SkillDataRepository로 HeroState를 생성한다.
+    /// Grade에 따라 MatchSkill/UniqueSkill/UltimateSkill을 각각 조회한다.
     /// </summary>
-    public static HeroState Create(HeroData heroData, SkillData skillData, int level, int partyIndex)
+    public static HeroState Create(HeroData heroData, SkillDataRepository skillRepo, int level, int partyIndex)
     {
         level = Math.Max(1, level);
-        var skill = BuildSkill(skillData);
+
+        var matchSkill    = BuildSkill(skillRepo, heroData.MatchSkillId);
+        var uniqueSkill   = heroData.UniqueSkillId   > 0 ? BuildSkill(skillRepo, heroData.UniqueSkillId)   : null;
+        var ultimateSkill = heroData.UltimateSkillId > 0 ? BuildSkill(skillRepo, heroData.UltimateSkillId) : null;
+
+        if (!Enum.TryParse<HeroClass>(heroData.Class, ignoreCase: true, out var heroClass))
+        {
+            Debug.LogWarning($"[HeroFactory] Unknown Class '{heroData.Class}' for hero {heroData.Id}, defaulting to None.");
+            heroClass = HeroClass.None;
+        }
 
         float attackInterval = heroData.AutoAttackInterval > 0f ? heroData.AutoAttackInterval : 1.5f;
         float attackRatio    = heroData.AutoAttackRatio    > 0f ? heroData.AutoAttackRatio    : 0.1f;
 
         return new HeroState(
-            maxHP:          heroData.BaseStats.MaxHP,
-            attack:         heroData.BaseStats.Attack,
-            defense:        heroData.BaseStats.Defense,
-            growthMaxHP:    heroData.GrowthStats.MaxHP,
-            growthAttack:   heroData.GrowthStats.Attack,
-            growthDefense:  heroData.GrowthStats.Defense,
-            level:          level,
-            partyIndex:     partyIndex,
-            skill:          skill,
-            autoAttackInterval: attackInterval,
-            autoAttackRatio:    attackRatio
+            maxHP:               heroData.BaseStats.MaxHP,
+            attack:              heroData.BaseStats.Attack,
+            defense:             heroData.BaseStats.Defense,
+            growthMaxHP:         heroData.GrowthStats.MaxHP,
+            growthAttack:        heroData.GrowthStats.Attack,
+            growthDefense:       heroData.GrowthStats.Defense,
+            level:               level,
+            partyIndex:          partyIndex,
+            matchSkill:          matchSkill,
+            uniqueSkill:         uniqueSkill,
+            ultimateSkill:       ultimateSkill,
+            autoAttackInterval:  attackInterval,
+            autoAttackRatio:     attackRatio,
+            heroClass:           heroClass,
+            grade:               heroData.Grade,
+            illustrationPath:    heroData.IllustrationPath ?? ""
         );
     }
 
-    private static HeroSkill BuildSkill(SkillData sd)
+    /// <summary>
+    /// skillId가 0이 아닌 경우 Repository에서 조회하여 HeroSkill을 생성한다.
+    /// </summary>
+    private static HeroSkill BuildSkill(SkillDataRepository skillRepo, int skillId)
     {
-        if (sd == null) return null;
+        if (skillId <= 0) return null;
+
+        var sd = skillRepo.GetById(skillId);
+        if (sd == null)
+        {
+            Debug.LogWarning($"[HeroFactory] SkillData not found for skillId={skillId}.");
+            return null;
+        }
 
         if (!Enum.TryParse<ActionType>(sd.ActionType, ignoreCase: true, out var actionType))
         {

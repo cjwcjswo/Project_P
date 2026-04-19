@@ -41,6 +41,12 @@ public class HeroHUDView : MonoBehaviour
         _deadOverlay.SetActive(false);
         _portraitButton.interactable = false;
 
+        // 3성 미만 히어로는 궁극기 UI 완전 숨김
+        bool hasUltimate = hero.Grade >= 3;
+        if (_ultGaugeFill != null) _ultGaugeFill.gameObject.SetActive(hasUltimate);
+        if (_ultReadyEffect != null) _ultReadyEffect.SetActive(false);
+        if (!hasUltimate) _portraitButton.interactable = false;
+
         // HP
         hero.OnHPChanged += (cur, max) =>
         {
@@ -62,6 +68,8 @@ public class HeroHUDView : MonoBehaviour
             _ultReadyEffect.SetActive(false);
             _ultGaugeFill.DOKill();
         };
+
+        if (!hasUltimate) return;
 
         // 궁극기 게이지 충전 (자기 heroIndex 필터링)
         ultManager.OnGaugeChanged += (idx, cur, max) =>

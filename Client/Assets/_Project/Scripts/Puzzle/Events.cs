@@ -73,3 +73,25 @@ public struct BoardReshuffleEvent
 {
     public List<(int col, int row)> UpdatedPositions;
 }
+
+/// <summary>
+/// 2성 히어로의 4매칭 이상 달성 시 고유 스킬 블록이 생성되었을 때 발행.
+/// PuzzleBoardView가 구독하여 BlockView에 특수 이펙트를 활성화한다.
+/// </summary>
+public struct SkillBlockCreatedEvent
+{
+    public BlockType Color;
+    public int Col;
+    public int Row;
+}
+
+/// <summary>
+/// 유저가 특수 스킬 블록을 탭했을 때 발행.
+/// BattleManager가 구독하여 십자 파괴 + UniqueSkill 발동을 처리한다.
+/// </summary>
+public struct SkillBlockTappedEvent
+{
+    public BlockType Color;
+    public int Col;
+    public int Row;
+}

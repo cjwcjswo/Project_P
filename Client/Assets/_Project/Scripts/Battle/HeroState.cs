@@ -11,8 +11,22 @@ public class HeroState
     public int Level { get; private set; }
     public int PartyIndex { get; private set; }
     public BlockType MappedColor => HeroColorMap.GetBlockType(PartyIndex);
-    public HeroSkill Skill { get; private set; }
     public bool IsDead => CurrentHP <= 0;
+
+    // ── 직업 / 등급 / 스킬 ────────────────────────────────────────────────
+    public HeroClass HeroClass { get; private set; }
+    public int Grade { get; private set; }
+    public string IllustrationPath { get; private set; }
+
+    /// <summary>1성~3성 공통: 3매칭 시 발동 스킬.</summary>
+    public HeroSkill MatchSkill { get; private set; }
+    /// <summary>2성 이상: 특수 블록 탭 시 발동. null이면 미보유.</summary>
+    public HeroSkill UniqueSkill { get; private set; }
+    /// <summary>3성 전용: 초상화 게이지 만충 후 탭 시 발동. null이면 미보유.</summary>
+    public HeroSkill UltimateSkill { get; private set; }
+
+    /// <summary>하위호환 단일 스킬 참조 (MatchSkill 동의어).</summary>
+    public HeroSkill Skill => MatchSkill;
 
     public float AutoAttackInterval { get; private set; }
     public float AutoAttackRatio { get; private set; }
@@ -57,19 +71,32 @@ public class HeroState
     public event Action<int> OnDamageTaken;
     public event Action<int> OnLevelUp;   // arg: newLevel
 
-    // ── 생성자 (growth 포함, Repository 기반) ──────────────────────────────
+    // ── 생성자 ─────────────────────────────────────────────────────────────
     public HeroState(int maxHP, int attack, int defense,
                      int growthMaxHP = 0, int growthAttack = 0, int growthDefense = 0,
                      int level = 1,
                      int partyIndex = 0,
-                     HeroSkill skill = null,
-                     float autoAttackInterval = 1.5f, float autoAttackRatio = 0.1f)
+                     HeroSkill matchSkill = null,
+                     HeroSkill uniqueSkill = null,
+                     HeroSkill ultimateSkill = null,
+                     float autoAttackInterval = 1.5f, float autoAttackRatio = 0.1f,
+                     HeroClass heroClass = HeroClass.None,
+                     int grade = 1,
+                     string illustrationPath = "")
     {
         Level = Math.Max(1, level);
         PartyIndex = partyIndex;
         AutoAttackInterval = autoAttackInterval;
         AutoAttackRatio = autoAttackRatio;
-        Skill = skill ?? DefaultSkill(partyIndex);
+        HeroClass = heroClass;
+        Grade = grade;
+        IllustrationPath = illustrationPath ?? "";
+
+        if (matchSkill == null)
+            UnityEngine.Debug.LogWarning($"[HeroState] partyIndex={partyIndex} has no MatchSkill assigned.");
+        MatchSkill = matchSkill;
+        UniqueSkill = uniqueSkill;
+        UltimateSkill = ultimateSkill;
 
         BaseMaxHP = maxHP;
         BaseAttack = attack;
@@ -173,15 +200,4 @@ public class HeroState
         Shield += amount;
         OnShieldChanged?.Invoke(Shield);
     }
-
-    // ── 기본 스킬 (Repository 미사용 시 fallback) ──────────────────────────
-    private static HeroSkill DefaultSkill(int partyIndex) => partyIndex switch
-    {
-        0 => new HeroSkill(SkillType.SingleAttack,   10f, "공격"),
-        1 => new HeroSkill(SkillType.AoEAttack,       6f, "광역", stunDuration: 1.5f),
-        2 => new HeroSkill(SkillType.Heal,             7f, "회복"),
-        3 => new HeroSkill(SkillType.Shield,           8f, "방어막"),
-        4 => new HeroSkill(SkillType.EnhancedAttack,   9f, "강타"),
-        _ => new HeroSkill(SkillType.SingleAttack,    10f, "공격")
-    };
 }

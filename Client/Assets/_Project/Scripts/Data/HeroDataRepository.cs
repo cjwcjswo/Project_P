@@ -16,8 +16,12 @@ public class HeroData
     public int Id;
     public string DisplayName;
     public string PrefabPath;
+    public string Class;
+    public string IllustrationPath;
     public int Grade;
-    public int SkillId;
+    public int MatchSkillId;
+    public int UniqueSkillId;
+    public int UltimateSkillId;
     public HeroStatData BaseStats;
     public HeroStatData GrowthStats;
     public float AutoAttackInterval;

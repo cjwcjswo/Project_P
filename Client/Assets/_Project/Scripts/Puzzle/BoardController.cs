@@ -12,14 +12,16 @@ public class BoardController
     private readonly Board _board;
     private readonly Matcher _matcher;
     private List<BlockType> _activeColors;
+    private HeroParty _party;
 
     public Board Board => _board;
 
-    public BoardController(Board board, List<BlockType> activeColors)
+    public BoardController(Board board, List<BlockType> activeColors, HeroParty party = null)
     {
         _board = board;
         _matcher = new Matcher();
         _activeColors = activeColors;
+        _party = party;
     }
 
     /// <summary>
@@ -78,6 +80,9 @@ public class BoardController
 
             // CascadeCompleteEvent용 누적 데이터 갱신
             AccumulateColorData(matches, combo, colorData);
+
+            // 4매칭 이상 시 특수 블록 생성 (2성 히어로)
+            TryCreateSkillBlocks(matches);
 
             EventBus.Publish(new MatchFoundEvent
             {
@@ -283,6 +288,43 @@ public class BoardController
                 existing.BlockCount += match.Positions.Count;
                 colorData[match.Type] = existing;
             }
+        }
+    }
+
+    /// <summary>
+    /// 매치 결과에서 4개 이상 매칭된 색상의 히어로가 2성 이상이면 특수 블록을 생성한다.
+    /// 특수 블록 위치: 매칭된 포지션들의 중심 좌표.
+    /// </summary>
+    private void TryCreateSkillBlocks(List<MatchResult> matches)
+    {
+        if (_party == null) return;
+
+        foreach (var match in matches)
+        {
+            if (match.Positions.Count < 4) continue;
+
+            var hero = _party.GetHeroByColor(match.Type);
+            if (hero == null) continue;
+            if (hero.Grade < 2 || hero.UniqueSkill == null) continue;
+
+            // 매칭 포지션들의 중심(floor) 좌표 계산
+            int sumCol = 0, sumRow = 0;
+            foreach (var (c, r) in match.Positions)
+            {
+                sumCol += c;
+                sumRow += r;
+            }
+            int centerCol = sumCol / match.Positions.Count;
+            int centerRow = sumRow / match.Positions.Count;
+
+            // 특수 블록 등록 및 이벤트 발행
+            _board.SetSkillBlock(centerCol, centerRow);
+            EventBus.Publish(new SkillBlockCreatedEvent
+            {
+                Color = match.Type,
+                Col   = centerCol,
+                Row   = centerRow
+            });
         }
     }
 }

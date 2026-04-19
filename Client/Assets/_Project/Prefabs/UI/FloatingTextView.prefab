@@ -63,7 +63,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -5307119047100949973, guid: 932d52fadff33994c8131df57f03ca98, type: 2}
+  - {fileID: 2100000, guid: d982fbe218f66ee40a7fcf267f8cddf3, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -107,10 +107,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: 123
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 932d52fadff33994c8131df57f03ca98, type: 2}
-  m_sharedMaterial: {fileID: -5307119047100949973, guid: 932d52fadff33994c8131df57f03ca98, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: d982fbe218f66ee40a7fcf267f8cddf3, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -134,8 +134,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 8
-  m_fontSizeBase: 8
+  m_fontSize: 4
+  m_fontSizeBase: 4
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -195,3 +195,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FloatingTextView
   _tmp: {fileID: 1942708030276565142}
+  _spawnYOffset: 0
+  _floatDistance: 0.8
+  _totalDuration: 1
+  _fadeDuration: 0.4
