@@ -18,16 +18,15 @@ public class SkillSystem
         _targeting = targeting;
     }
 
+    // ── 공개 진입점 ──────────────────────────────────────────────────────────
+
     /// <summary>
     /// 2성 특수 블록 탭 시 해당 히어로의 UniqueSkill을 즉시 발동.
     /// </summary>
     public void ExecuteUniqueSkill(HeroState hero)
     {
         if (hero == null || hero.UniqueSkill == null) return;
-        var effect = DamageCalculator.Calculate(
-            hero.UniqueSkill, hero.MappedColor,
-            totalBlockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
-        ExecuteSkill(effect, hero);
+        ExecuteSkillActions(hero.UniqueSkill, hero, hero.MappedColor, blockCount: 1, comboMultiplier: 1f);
     }
 
     /// <summary>
@@ -36,14 +35,11 @@ public class SkillSystem
     public void ExecuteUltimateSkill(HeroState hero)
     {
         if (hero == null || hero.UltimateSkill == null) return;
-        var effect = DamageCalculator.Calculate(
-            hero.UltimateSkill, hero.MappedColor,
-            totalBlockCount: 1, comboMultiplier: 1f, heroAttack: hero.Attack);
-        ExecuteSkill(effect, hero);
+        ExecuteSkillActions(hero.UltimateSkill, hero, hero.MappedColor, blockCount: 1, comboMultiplier: 1f);
     }
 
     /// <summary>
-    /// 캐스케이드 결과로부터 색상별 개별 스킬 발동.
+    /// 캐스케이드 결과로부터 색상별 MatchSkill 발동.
     /// </summary>
     public void ExecuteFromCascade(List<ColorMatchData> colorBreakdown, ComboCalculator combo)
     {
@@ -53,173 +49,117 @@ public class SkillSystem
             if (hero == null) continue;
 
             float multiplier = combo.GetMultiplierAt(data.ComboAtTrigger);
-            var effect = DamageCalculator.Calculate(hero.MatchSkill, data.Color, data.BlockCount, multiplier, hero.Attack);
-            ExecuteSkill(effect, hero);
+            ExecuteSkillActions(hero.MatchSkill, hero, data.Color, data.BlockCount, multiplier);
         }
     }
 
-    public void ExecuteSkill(SkillEffect effect, HeroState sourceHero)
+    // ── 핵심 실행 엔진 ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// GDD v1.0 순차 멀티 액션 실행.
+    /// skill.Actions 배열을 순서대로 순회하여 각 Action을 독립적으로 실행한다.
+    /// </summary>
+    public void ExecuteSkillActions(HeroSkill skill, HeroState sourceHero,
+                                    BlockType sourceColor, int blockCount, float comboMultiplier)
     {
-        switch (effect.ActionType)
+        if (skill == null || skill.Actions.Count == 0) return;
+
+        foreach (var action in skill.Actions)
+        {
+            // GDD 5절: 각 Action 직전 타겟 유효성 재검증
+            ResolveTargets(action, sourceHero,
+                out List<EnemyState> enemyTargets,
+                out List<HeroState> heroTargets);
+
+            var effect = DamageCalculator.Calculate(
+                action, sourceColor, blockCount, comboMultiplier, sourceHero.Attack, skill.Name);
+
+            // ActionType별 효과 적용
+            ApplyActionEffect(action, effect, enemyTargets, heroTargets, sourceHero);
+
+            // action.StatusEffects를 해당 액션의 타겟에게 적용
+            ApplyActionStatusEffects(action, enemyTargets, heroTargets);
+
+            // 뷰 이벤트 발행 (각 액션마다 발행)
+            OnSkillExecuted?.Invoke(effect);
+        }
+    }
+
+    // ── 타겟 결정 ────────────────────────────────────────────────────────────
+
+    private void ResolveTargets(SkillAction action, HeroState sourceHero,
+                                out List<EnemyState> enemyTargets,
+                                out List<HeroState> heroTargets)
+    {
+        if (action.Team == TargetTeam.Enemy)
+        {
+            enemyTargets = _targeting.Resolve(
+                _enemies.AliveEnemies, action.Strategy, action.MaxCount, action.TargetIndex);
+            heroTargets = null;
+        }
+        else
+        {
+            enemyTargets = null;
+            heroTargets = _targeting.Resolve(
+                _party.GetAliveHeroes(), action.Strategy, action.MaxCount,
+                self: sourceHero, fixedIndex: action.TargetIndex);
+        }
+    }
+
+    // ── 효과 적용 ────────────────────────────────────────────────────────────
+
+    private void ApplyActionEffect(SkillAction action, SkillEffect effect,
+                                   List<EnemyState> enemyTargets,
+                                   List<HeroState> heroTargets,
+                                   HeroState sourceHero)
+    {
+        switch (action.ActionType)
         {
             case ActionType.Attack:
-                ExecuteAttack(effect);
+                if (enemyTargets == null) break;
+                foreach (var enemy in enemyTargets)
+                    enemy.TakeDamage(effect.Value);
                 break;
 
             case ActionType.Heal:
-                ExecuteHeal(effect, sourceHero);
+                if (heroTargets == null) break;
+                foreach (var hero in heroTargets)
+                    hero.Heal(effect.Value);
                 break;
 
             case ActionType.Shield:
-                ExecuteShield(effect, sourceHero);
+                if (heroTargets == null) break;
+                foreach (var hero in heroTargets)
+                    hero.AddShield(effect.Value);
                 break;
 
             case ActionType.Buff:
-                ExecuteBuff(effect);
-                break;
-        }
-
-        // StatusEffects 부가 적용 (Attack/Heal/Shield 등 모든 타입)
-        if (effect.Skill != null)
-            ApplyStatusEffectsToTargets(effect);
-
-        OnSkillExecuted?.Invoke(effect);
-    }
-
-    // ── Attack ──────────────────────────────────────────────────────────────
-    private void ExecuteAttack(SkillEffect effect)
-    {
-        switch (effect.TargetScope)
-        {
-            case TargetScope.Single:
-            {
-                var target = _targeting.GetPriorityTarget(_enemies.AliveEnemies);
-                target?.TakeDamage(effect.Value);
-                break;
-            }
-            case TargetScope.Multi:
-            {
-                var alive = _enemies.AliveEnemies;
-                int count = Math.Min(effect.MaxTargetCount, alive.Count);
-                for (int i = 0; i < count; i++)
-                    alive[i].TakeDamage(effect.Value);
-                break;
-            }
-            case TargetScope.All:
-            {
-                foreach (var enemy in _enemies.AliveEnemies)
-                    enemy.TakeDamage(effect.Value);
-                break;
-            }
-        }
-    }
-
-    // ── Heal ────────────────────────────────────────────────────────────────
-    private void ExecuteHeal(SkillEffect effect, HeroState sourceHero)
-    {
-        switch (effect.TargetScope)
-        {
-            case TargetScope.Single:
-                sourceHero.Heal(effect.Value);
-                break;
-            case TargetScope.Multi:
-            {
-                // 최저 HP 순 N명 회복
-                var alive = _party.GetAliveHeroes();
-                alive.Sort((a, b) => a.CurrentHP.CompareTo(b.CurrentHP));
-                int count = Math.Min(effect.MaxTargetCount, alive.Count);
-                for (int i = 0; i < count; i++)
-                    alive[i].Heal(effect.Value);
-                break;
-            }
-            case TargetScope.All:
-            {
-                foreach (var hero in _party.GetAliveHeroes())
-                    hero.Heal(effect.Value);
-                break;
-            }
-        }
-    }
-
-    // ── Shield ──────────────────────────────────────────────────────────────
-    private void ExecuteShield(SkillEffect effect, HeroState sourceHero)
-    {
-        switch (effect.TargetScope)
-        {
-            case TargetScope.Single:
-                sourceHero.AddShield(effect.Value);
-                break;
-            case TargetScope.All:
-            {
-                foreach (var hero in _party.GetAliveHeroes())
-                    hero.AddShield(effect.Value);
-                break;
-            }
-            default:
-                sourceHero.AddShield(effect.Value);
+                // Buff 수치 효과는 StatusEffects로만 처리. 여기서는 추가 처리 없음.
                 break;
         }
     }
 
-    // ── Buff ────────────────────────────────────────────────────────────────
-    private void ExecuteBuff(SkillEffect effect)
+    private static void ApplyActionStatusEffects(SkillAction action,
+                                                  List<EnemyState> enemyTargets,
+                                                  List<HeroState> heroTargets)
     {
-        if (effect.Skill == null) return;
+        if (action.StatusEffects == null || action.StatusEffects.Count == 0) return;
 
-        var targets = effect.TargetScope == TargetScope.All
-            ? _party.GetAliveHeroes()
-            : new List<HeroState> { GetBuffTarget(effect) };
-
-        foreach (var hero in targets)
+        if (action.Team == TargetTeam.Enemy && enemyTargets != null)
         {
-            foreach (var se in effect.Skill.StatusEffects)
-                hero.ApplyStatusEffect(se);
-        }
-    }
-
-    private HeroState GetBuffTarget(SkillEffect effect)
-    {
-        // Single buff → 시전자(partyIndex 0 fallback)
-        return _party.GetHeroByIndex(0);
-    }
-
-    // ── StatusEffects 부가 적용 ─────────────────────────────────────────────
-    private void ApplyStatusEffectsToTargets(SkillEffect effect)
-    {
-        if (effect.Skill.StatusEffects == null || effect.Skill.StatusEffects.Count == 0) return;
-        // Buff 스킬은 ExecuteBuff에서 이미 처리
-        if (effect.ActionType == ActionType.Buff) return;
-
-        // Attack 계열 → 적에게 상태이상 부여
-        if (effect.ActionType == ActionType.Attack)
-        {
-            var targets = GetAttackTargets(effect);
-            foreach (var enemy in targets)
+            foreach (var enemy in enemyTargets)
             {
-                foreach (var se in effect.Skill.StatusEffects)
+                foreach (var se in action.StatusEffects)
                     enemy.ApplyStatusEffect(se);
             }
         }
-    }
-
-    private List<EnemyState> GetAttackTargets(SkillEffect effect)
-    {
-        var result = new List<EnemyState>();
-        var alive = _enemies.AliveEnemies;
-        switch (effect.TargetScope)
+        else if (action.Team == TargetTeam.Ally && heroTargets != null)
         {
-            case TargetScope.Single:
-                var t = _targeting.GetPriorityTarget(alive);
-                if (t != null) result.Add(t);
-                break;
-            case TargetScope.Multi:
-                int count = Math.Min(effect.MaxTargetCount, alive.Count);
-                for (int i = 0; i < count; i++) result.Add(alive[i]);
-                break;
-            case TargetScope.All:
-                result.AddRange(alive);
-                break;
+            foreach (var hero in heroTargets)
+            {
+                foreach (var se in action.StatusEffects)
+                    hero.ApplyStatusEffect(se);
+            }
         }
-        return result;
     }
 }

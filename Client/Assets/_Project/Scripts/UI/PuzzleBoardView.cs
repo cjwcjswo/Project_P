@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
@@ -13,6 +14,7 @@ using UnityEngine.InputSystem;
 public class PuzzleBoardView : MonoBehaviour
 {
     [SerializeField] private BlockView _blockPrefab;
+    [SerializeField] private PuzzleVfxPool _vfxPool;
 
     private BlockView[,] _blockViews;
     private BoardController _controller;
@@ -37,6 +39,15 @@ public class PuzzleBoardView : MonoBehaviour
     [Tooltip("보드 배치를 제한할 화면 세로 비율. 0.5면 하단 50% 영역을 사용.")]
     [Range(0.1f, 1f)]
     [SerializeField] private float _verticalAreaRatio = 0.5f;
+
+    [Header("Layout (HUD Safe Inset)")]
+    [Tooltip("하단 HUD가 차지하는 높이(픽셀). 1080x1920 기준 값이며, 실제 해상도에서는 Screen.height 비율로 스케일된다.")]
+    [Min(0f)]
+    [SerializeField] private float _bottomReservedPixelsBase = 250f;
+
+    [Tooltip("하단 HUD 픽셀 기준값의 기준 해상도 높이(픽셀). 기본 1920.")]
+    [Min(1f)]
+    [SerializeField] private float _bottomReservedReferenceHeight = 1920f;
 
     [Tooltip("보드 바깥 여백(월드 유닛). 하단 50% 영역 내부에서만 적용된다.")]
     [SerializeField] private float _paddingLeft = 0.2f;
@@ -80,6 +91,14 @@ public class PuzzleBoardView : MonoBehaviour
         float screenBottom = cam.transform.position.y - cam.orthographicSize;
         float screenLeft   = cam.transform.position.x - screenWidth * 0.5f;
 
+        // 하단 HUD 예약 영역(픽셀)을 월드 유닛으로 환산하여 보드 시작점만 위로 올린다.
+        // - base는 1080x1920 기준 (reference height = 1920)
+        // - 실제 해상도에서는 Screen.height 비율로 스케일
+        float referenceH = Mathf.Max(1f, _bottomReservedReferenceHeight);
+        float scaledPx = _bottomReservedPixelsBase * (Screen.height / referenceH);
+        float worldPerPixel = screenHeight / Mathf.Max(1, Screen.height);
+        float insetWorld = scaledPx * worldPerPixel;
+
         float availableWidth  = Mathf.Max(0.01f, areaWidth  - (_paddingLeft + _paddingRight));
         float availableHeight = Mathf.Max(0.01f, areaHeight - (_paddingTop  + _paddingBottom));
 
@@ -94,7 +113,7 @@ public class PuzzleBoardView : MonoBehaviour
         float boardHeight = _cellStep * Constants.BOARD_HEIGHT;
 
         float areaLeft   = screenLeft + _paddingLeft;
-        float areaBottom = screenBottom + _paddingBottom;
+        float areaBottom = screenBottom + insetWorld + _paddingBottom;
 
         _boardOrigin = new Vector3(
             areaLeft + (availableWidth - boardWidth) * 0.5f + _cellStep * 0.5f,
@@ -279,6 +298,7 @@ public class PuzzleBoardView : MonoBehaviour
         EventBus.Subscribe<HeroColorDisabledEvent>(OnHeroColorDisabled);
         EventBus.Subscribe<BoardReshuffleEvent>(OnBoardReshuffle);
         EventBus.Subscribe<SkillBlockCreatedEvent>(OnSkillBlockCreated);
+        EventBus.Subscribe<SkillBlockCrossDestroyEvent>(OnSkillBlockCrossDestroy);
     }
 
     private void OnDisable()
@@ -296,6 +316,7 @@ public class PuzzleBoardView : MonoBehaviour
         EventBus.Unsubscribe<HeroColorDisabledEvent>(OnHeroColorDisabled);
         EventBus.Unsubscribe<BoardReshuffleEvent>(OnBoardReshuffle);
         EventBus.Unsubscribe<SkillBlockCreatedEvent>(OnSkillBlockCreated);
+        EventBus.Unsubscribe<SkillBlockCrossDestroyEvent>(OnSkillBlockCrossDestroy);
 
         _cts?.Cancel();
         _cts?.Dispose();
@@ -336,6 +357,12 @@ public class PuzzleBoardView : MonoBehaviour
                 var view = _blockViews[col, row];
                 if (view != null)
                 {
+                    var type = view.Type;
+                    var pos = GridToWorld(col, row);
+                    var color = BlockTypeColors.Get(type);
+                    _vfxPool?.SpawnBlockDestroy(pos, color);
+                    TrySpawnOrbToHero(type, pos, color);
+
                     var captured = view;
                     view.AnimateDestroy(Constants.DESTROY_ANIM_DURATION,
                         () => ReturnToPool(captured)).Forget();
@@ -343,6 +370,49 @@ public class PuzzleBoardView : MonoBehaviour
                 }
             }
         }
+
+        // 스킬 블록이 매칭 제거될 때 십자 범위 추가 파괴 연출
+        if (evt.SkillCrossDestroyPositions != null)
+        {
+            foreach (var (col, row) in evt.SkillCrossDestroyPositions)
+            {
+                var view = _blockViews[col, row];
+                if (view == null) continue;
+                var type = view.Type;
+                var pos = GridToWorld(col, row);
+                var color = BlockTypeColors.Get(type);
+                _vfxPool?.SpawnBlockDestroy(pos, color);
+                TrySpawnOrbToHero(type, pos, color);
+
+                var captured = view;
+                view.AnimateDestroy(Constants.DESTROY_ANIM_DURATION,
+                    () => ReturnToPool(captured)).Forget();
+                _blockViews[col, row] = null;
+            }
+        }
+    }
+
+    private void TrySpawnOrbToHero(BlockType type, Vector3 fromPos, Color color)
+    {
+        if (_vfxPool == null) return;
+        if (_party == null) return;
+
+        int partyIndex = HeroColorMap.GetHeroIndex(type);
+        if (partyIndex < 0) return;
+
+        var heroState = _party.GetHeroByIndex(partyIndex);
+        if (heroState == null || heroState.IsDead) return;
+
+        var heroView = HeroEntityViewRegistry.Get(partyIndex);
+        if (heroView == null) return;
+
+        _vfxPool.SpawnOrbToHero(
+            fromPos,
+            heroView.WorldPosition,
+            color,
+            duration: 1.24f,
+            onArrived: heroView.PlaySkillAnim
+        );
     }
 
     private void OnGravityRefill(GravityRefillEvent evt)
@@ -434,5 +504,30 @@ public class PuzzleBoardView : MonoBehaviour
     {
         var view = _blockViews[evt.Col, evt.Row];
         view?.SetSkillBlock(true);
+    }
+
+    /// <summary>
+    /// 탭 발동 십자 파괴: 중심 → 상하좌우 순으로 0.05s 지연 파문 연출.
+    /// </summary>
+    private void OnSkillBlockCrossDestroy(SkillBlockCrossDestroyEvent evt)
+    {
+        if (evt.CrossPositions == null) return;
+
+        var center  = (evt.CenterCol, evt.CenterRow);
+        var ordered = evt.CrossPositions
+            .OrderBy(p => p == center ? 0 : 1)
+            .ToList();
+
+        float delay = 0f;
+        foreach (var (col, row) in ordered)
+        {
+            var view = _blockViews[col, row];
+            if (view == null) { delay += 0.05f; continue; }
+
+            var captured = view;
+            view.AnimateCrossDestroy(delay, () => ReturnToPool(captured)).Forget();
+            _blockViews[col, row] = null;
+            delay += 0.05f;
+        }
     }
 }

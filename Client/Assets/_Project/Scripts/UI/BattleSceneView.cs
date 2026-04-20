@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +25,9 @@ public class BattleSceneView : MonoBehaviour
 
     [Header("Cut-in")]
     [SerializeField] private CutInView _cutInView;
+
+    [Header("Wave Transition")]
+    [SerializeField] private BackgroundScrollView _backgroundScroll;
 
     public CutInView CutIn => _cutInView;
 
@@ -100,6 +104,7 @@ public class BattleSceneView : MonoBehaviour
 
             int partyIndex = heroes[i].PartyIndex;
             _heroViews[partyIndex] = view;
+            HeroEntityViewRegistry.Register(partyIndex, view);
 
             // 자동 평타 이벤트 구독
             heroes[i].OnAutoAttack += _ => OnHeroAutoAttack(partyIndex);
@@ -131,6 +136,12 @@ public class BattleSceneView : MonoBehaviour
 
             // 자동 평타 이벤트 구독
             enemies[i].OnAutoAttack += _ => OnEnemyAutoAttack(waveIndex);
+
+            // 스킬 시전 애니메이션
+            enemies[i].OnSkillCast += () =>
+            {
+                if (_enemyViews.TryGetValue(waveIndex, out var ev)) ev.PlaySkillAnim();
+            };
 
             // 피격 데미지 텍스트
             enemies[i].OnDamageTaken += dmg =>
@@ -169,12 +180,23 @@ public class BattleSceneView : MonoBehaviour
         _heroViews.TryGetValue(srcPartyIndex, out var srcHeroView);
         var priorityEnemy = _targeting.GetPriorityTarget(_wave.AliveEnemies);
 
+        // AoE 공격이거나 비-Attack 계열(Heal/Shield/Buff)이면 Skill 애니메이션.
+        // 단일 적을 향한 평타 계열만 Attack 애니메이션.
+        bool isMassAttack = effect.ActionType == ActionType.Attack &&
+                            (effect.Strategy == TargetStrategy.All ||
+                             (effect.MaxCount > 1 && effect.MaxCount >= _enemyViews.Count));
+
+        if (isMassAttack || effect.ActionType != ActionType.Attack)
+            srcHeroView?.PlaySkillAnim();
+        else
+            srcHeroView?.PlayAttackAnim();
+
         switch (effect.ActionType)
         {
             case ActionType.Attack:
-                srcHeroView?.PlayAttackAnim();
-                if (effect.TargetScope == TargetScope.All ||
-                    (effect.TargetScope == TargetScope.Multi && effect.MaxTargetCount >= _enemyViews.Count))
+                bool isAoE = effect.Strategy == TargetStrategy.All ||
+                             (effect.MaxCount > 0 && effect.MaxCount >= _enemyViews.Count);
+                if (isAoE)
                 {
                     foreach (var ev in _enemyViews.Values)
                         ev.PlayAoEHitAnim(GetBlockColor(effect.SourceColor));
@@ -282,9 +304,41 @@ public class BattleSceneView : MonoBehaviour
         _                => Color.white
     };
 
+    // ── 웨이브 전환 연출 ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// BattleManager.OnWaveTransitionRequested에 등록되어 웨이브 전환 연출을 수행한다.
+    /// Run 애니메이션 → 배경 스크롤 → Idle 복귀 → 짧은 여백 순서로 진행한다.
+    /// </summary>
+    public async UniTask WaveTransitionAsync(int nextWaveIndex)
+    {
+        // 1. 살아있는 모든 히어로 Run 애니메이션 시작
+        foreach (var heroView in _heroViews.Values)
+            heroView.PlayRunAnim();
+
+        // 2. 배경 스크롤 대기 (BackgroundScrollView 미설정 시 1.2s Delay로 대체)
+        if (_backgroundScroll != null)
+            await _backgroundScroll.ScrollAsync(default);
+        else
+            await UniTask.Delay(TimeSpan.FromSeconds(1.2f));
+
+        // 3. 히어로 Run → Idle 복귀
+        foreach (var heroView in _heroViews.Values)
+            heroView.StopRunAnim();
+
+        // 4. 적 스폰 전 짧은 여백
+        await UniTask.Delay(TimeSpan.FromSeconds(0.3f));
+
+        // 5. 다음 웨이브 전환 전 배경 원위치 (이미 스크롤이 완료되었으므로 즉시 이동)
+        _backgroundScroll?.ResetPositions();
+    }
+
     private void OnDestroy()
     {
         if (_skillSystem != null)
             _skillSystem.OnSkillExecuted -= OnSkillExecuted;
+
+        foreach (var kv in _heroViews)
+            HeroEntityViewRegistry.Unregister(kv.Key, kv.Value);
     }
 }

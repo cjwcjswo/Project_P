@@ -204,8 +204,8 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -2785772567798726523, guid: 3a4b80b8581d5444ca77a73e0035c2f8, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Sprite: {fileID: 9123902884181212228, guid: 4af5148a94fb7334badab94a84222b88, type: 3}
+  m_Color: {r: 0.92941177, g: 0.9490196, b: 0.96862745, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -298,7 +298,7 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 2360927252869429142, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
+  m_Sprite: {fileID: -7491308112020006111, guid: 2ec6233e427cefa439fadd1e80cdb89c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -324,23 +324,25 @@ MonoBehaviour:
   _fallbackSprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
   _spritesByType:
   - Type: 1
-    Sprite: {fileID: -7496966864412918062, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
+    Sprite: {fileID: -7491308112020006111, guid: 2ec6233e427cefa439fadd1e80cdb89c, type: 3}
   - Type: 2
-    Sprite: {fileID: 2360927252869429142, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
+    Sprite: {fileID: 3555236616431251950, guid: 2ec6233e427cefa439fadd1e80cdb89c, type: 3}
   - Type: 3
-    Sprite: {fileID: 8243713229997694533, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
+    Sprite: {fileID: -3670506899322099944, guid: 2ec6233e427cefa439fadd1e80cdb89c, type: 3}
   - Type: 4
-    Sprite: {fileID: -4417848210644184451, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
+    Sprite: {fileID: -4709285203966558810, guid: 2ec6233e427cefa439fadd1e80cdb89c, type: 3}
   - Type: 5
-    Sprite: {fileID: 7241460152898092619, guid: 03871010c425b6b48ac86a54f76bf7be, type: 3}
+    Sprite: {fileID: 8315919481755738165, guid: 2ec6233e427cefa439fadd1e80cdb89c, type: 3}
   _skillBlockEffect: {fileID: 1288349189055894003}
   _classIconRenderer: {fileID: 7801418645397796231}
   _iconsByClass:
   - Class: 1
-    Sprite: {fileID: -2785772567798726523, guid: 3a4b80b8581d5444ca77a73e0035c2f8, type: 3}
+    Sprite: {fileID: 9123902884181212228, guid: 4af5148a94fb7334badab94a84222b88, type: 3}
   - Class: 2
-    Sprite: {fileID: 5107745550630538661, guid: 3a4b80b8581d5444ca77a73e0035c2f8, type: 3}
+    Sprite: {fileID: 5990339900596708170, guid: 4af5148a94fb7334badab94a84222b88, type: 3}
   - Class: 3
-    Sprite: {fileID: 6069577852159576601, guid: 3a4b80b8581d5444ca77a73e0035c2f8, type: 3}
+    Sprite: {fileID: 1169354506873168664, guid: 4af5148a94fb7334badab94a84222b88, type: 3}
   - Class: 4
-    Sprite: {fileID: -6540575628696450570, guid: 3a4b80b8581d5444ca77a73e0035c2f8, type: 3}
+    Sprite: {fileID: -3764805149024890459, guid: 4af5148a94fb7334badab94a84222b88, type: 3}
+  _classIconFillRatio: 0.42
+  _skillEffectScaleMul: 1

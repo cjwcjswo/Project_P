@@ -162,6 +162,26 @@ public class Board
     }
 
     /// <summary>
+    /// 상하좌우 십자 모양 좌표를 파괴 없이 반환 (read-only).
+    /// BoardController가 매칭 제거 전에 십자 범위를 계산할 때 사용한다.
+    /// </summary>
+    public List<(int col, int row)> GetCrossPatternPositions(int col, int row)
+    {
+        var positions = new List<(int col, int row)>();
+        if (_grid[col, row] != BlockType.None && _grid[col, row] != BlockType.Disabled)
+            positions.Add((col, row));
+        if (row + 1 < Height && _grid[col, row + 1] != BlockType.Disabled)
+            positions.Add((col, row + 1));
+        if (row - 1 >= 0 && _grid[col, row - 1] != BlockType.Disabled)
+            positions.Add((col, row - 1));
+        if (col - 1 >= 0 && _grid[col - 1, row] != BlockType.Disabled)
+            positions.Add((col - 1, row));
+        if (col + 1 < Width && _grid[col + 1, row] != BlockType.Disabled)
+            positions.Add((col + 1, row));
+        return positions;
+    }
+
+    /// <summary>
     /// 상하좌우 십자 모양 블록을 파괴한다 (2성 특수 블록 탭 발동 시).
     /// 특수 블록 자신의 위치도 포함하여 반환.
     /// </summary>

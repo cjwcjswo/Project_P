@@ -12,13 +12,27 @@ public enum ActionType
 }
 
 /// <summary>
-/// GDD 3.1 기준 스킬 적용 범위.
+/// GDD v1.0 타겟 피아 식별.
 /// </summary>
-public enum TargetScope
+public enum TargetTeam
 {
-    Single,
-    Multi,
-    All
+    Ally,
+    Enemy
+}
+
+/// <summary>
+/// GDD v1.0 타겟팅 알고리즘 8종.
+/// </summary>
+public enum TargetStrategy
+{
+    Front,
+    Back,
+    LowestHP,
+    HighestAtk,
+    Self,
+    FixedIndex,
+    All,
+    Random
 }
 
 /// <summary>
@@ -34,27 +48,46 @@ public enum HeroClass
 }
 
 /// <summary>
-/// 히어로 고유 스킬 정의. SkillData.json 스키마에 대응.
+/// 스킬 내 개별 행동 단위. Actions[] 배열의 원소.
+/// </summary>
+public class SkillAction
+{
+    public ActionType ActionType { get; }
+    public TargetTeam Team { get; }
+    public TargetStrategy Strategy { get; }
+    public int MaxCount { get; }
+    public int TargetIndex { get; }
+    public float BaseMultiplier { get; }
+    public List<StatusEffectData> StatusEffects { get; }
+
+    public SkillAction(ActionType actionType, TargetTeam team, TargetStrategy strategy,
+                       int maxCount, int targetIndex, float baseMultiplier,
+                       List<StatusEffectData> statusEffects = null)
+    {
+        ActionType = actionType;
+        Team = team;
+        Strategy = strategy;
+        MaxCount = maxCount;
+        TargetIndex = targetIndex;
+        BaseMultiplier = baseMultiplier;
+        StatusEffects = statusEffects ?? new List<StatusEffectData>();
+    }
+}
+
+/// <summary>
+/// 히어로 고유 스킬 정의. Actions 배열 기반 모듈형 구조.
 /// </summary>
 public class HeroSkill
 {
-    public ActionType ActionType { get; }
-    public TargetScope TargetScope { get; }
-    public float BaseMultiplier { get; }
-    public int MaxTargetCount { get; }
     public string Name { get; }
-    public List<StatusEffectData> StatusEffects { get; }
+    public List<SkillAction> Actions { get; }
 
-    public HeroSkill(ActionType actionType, TargetScope targetScope,
-                     float baseMultiplier, int maxTargetCount,
-                     string name,
-                     List<StatusEffectData> statusEffects = null)
+    /// <summary>하위 호환 프로퍼티 — Actions[0] 기준 ActionType 반환.</summary>
+    public ActionType ActionType => Actions.Count > 0 ? Actions[0].ActionType : ActionType.Attack;
+
+    public HeroSkill(string name, List<SkillAction> actions)
     {
-        ActionType = actionType;
-        TargetScope = targetScope;
-        BaseMultiplier = baseMultiplier;
-        MaxTargetCount = maxTargetCount;
         Name = name;
-        StatusEffects = statusEffects ?? new List<StatusEffectData>();
+        Actions = actions ?? new List<SkillAction>();
     }
 }

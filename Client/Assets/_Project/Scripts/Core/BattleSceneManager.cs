@@ -97,11 +97,13 @@ public class BattleSceneManager : MonoBehaviour
         // ── 5. UI 바인딩 ──────────────────────────────────────────────────
         _battleHUD.BindParty(party, _battleManager.UltManager, _battleManager);
         _battleHUD.BindCombo(ServiceLocator.Get<ComboCalculator>());
+        _battleHUD.BindStageWave(stageId, _battleManager);
 
         _battleSceneView.Bind(party, _battleManager.CurrentWave,
             ServiceLocator.Get<SkillSystem>(),
             _battleManager.Targeting);
         _battleSceneView.BindBattleManager(_battleManager);
+        _battleManager.OnWaveTransitionRequested = _battleSceneView.WaveTransitionAsync;
         _battleManager.SetCutInView(_battleSceneView.CutIn);
 
         Debug.Log($"[BattleSceneManager] Battle initialized. StageId={stageId}");

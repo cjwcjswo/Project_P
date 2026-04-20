@@ -21,6 +21,9 @@ public class BattleManager
     public event Action OnBattleWin;
     public event Action OnBattleLose;
 
+    /// <summary>웨이브 전환 전 View 연출을 기다리는 외부 콜백. BattleSceneManager에서 주입.</summary>
+    public Func<int, UniTask> OnWaveTransitionRequested;
+
     /// <summary>웨이브 전환 시 발행. 인자: 새 웨이브, 웨이브 인덱스(0-based)</summary>
     public event Action<EnemyWave, int> OnWaveChanged;
 
@@ -71,10 +74,10 @@ public class BattleManager
     private void ActivateWave(EnemyWave wave)
     {
         if (_currentWave != null)
-            _currentWave.OnAllEnemiesDead -= HandleAllEnemiesDead;
+            _currentWave.OnAllEnemiesDead -= OnAllEnemiesDeadHandler;
 
         _currentWave = wave;
-        _currentWave.OnAllEnemiesDead += HandleAllEnemiesDead;
+        _currentWave.OnAllEnemiesDead += OnAllEnemiesDeadHandler;
         _skillSystem.SetWave(wave);
 
         OnWaveChanged?.Invoke(wave, _currentWaveIndex);
@@ -87,14 +90,21 @@ public class BattleManager
         }
     }
 
+    private void OnAllEnemiesDeadHandler()
+        => HandleAllEnemiesDeadAsync().Forget();
+
     /// <summary>
-    /// 현재 웨이브 클리어 후 다음 웨이브로 진행. 마지막 웨이브면 전투 승리 처리.
+    /// 현재 웨이브 클리어 후 View 연출을 기다린 뒤 다음 웨이브로 진행.
+    /// 마지막 웨이브면 전투 승리 처리.
     /// </summary>
-    private void HandleAllEnemiesDead()
+    private async UniTaskVoid HandleAllEnemiesDeadAsync()
     {
         int nextIndex = _currentWaveIndex + 1;
         if (nextIndex < _setupData.Waves.Length)
         {
+            if (OnWaveTransitionRequested != null)
+                await OnWaveTransitionRequested.Invoke(nextIndex);
+
             _currentWaveIndex = nextIndex;
             ActivateWave(_setupData.Waves[_currentWaveIndex]);
         }
@@ -162,27 +172,29 @@ public class BattleManager
 
     /// <summary>
     /// 특정 히어로의 궁극기 발동 (UI에서 호출).
+    /// 컷인은 비동기로 재생하고, 스킬 효과는 컷인이 끝나기 전에 바로 적용한다.
     /// </summary>
-    public async UniTask ActivateUltimateAsync(int heroIndex)
+    public UniTask ActivateUltimateAsync(int heroIndex)
     {
         var hero = _party.GetHeroByIndex(heroIndex);
-        if (hero == null || hero.IsDead) return;
-        if (hero.Grade < 3 || hero.UltimateSkill == null) return;
+        if (hero == null || hero.IsDead) return UniTask.CompletedTask;
+        if (hero.Grade < 3 || hero.UltimateSkill == null) return UniTask.CompletedTask;
 
         var result = _ultManager.Activate(heroIndex, hero.Attack);
         // 게이지 미충전 시 취소
-        if (!result.IsActivated) return;
+        if (!result.IsActivated) return UniTask.CompletedTask;
 
-        // 컷인 연출 (설정된 경우)
+        // 컷인 연출 (설정된 경우) — await하지 않고 병행 재생
         if (_cutInView != null && !string.IsNullOrEmpty(hero.IllustrationPath))
         {
             var illustration = UnityEngine.Resources.Load<UnityEngine.Sprite>(hero.IllustrationPath);
             if (illustration != null)
-                await _cutInView.PlayAsync(illustration);
+                _cutInView.PlayAsync(illustration).Forget();
         }
 
         // UltimateSkill 발동 (SkillSystem 경유). 보드 퍼즐에는 영향 없음.
         _skillSystem.ExecuteUltimateSkill(hero);
+        return UniTask.CompletedTask;
     }
 
     public void SetCutInView(CutInView cutInView)
@@ -278,9 +290,16 @@ public class BattleManager
     {
         while (!ct.IsCancellationRequested)
         {
-            await UniTask.Delay(
-                TimeSpan.FromSeconds(enemy.SkillCooldown),
-                cancellationToken: ct);
+            // 쿨다운 카운트다운 (0.5s 틱으로 UI 갱신)
+            float cooldownRemaining = enemy.SkillCooldown;
+            enemy.UpdateCooldown(cooldownRemaining);
+            while (cooldownRemaining > 0f)
+            {
+                float tick = Mathf.Min(0.5f, cooldownRemaining);
+                await UniTask.Delay(TimeSpan.FromSeconds(tick), cancellationToken: ct);
+                cooldownRemaining -= tick;
+                enemy.UpdateCooldown(Mathf.Max(0f, cooldownRemaining));
+            }
 
             if (enemy.IsDead) break;
             if (enemy.IsStunned) continue;
@@ -321,24 +340,40 @@ public class BattleManager
     /// 2성 특수 블록 탭 발동: 십자 파괴 + UniqueSkill 즉시 실행.
     /// </summary>
     private void OnSkillBlockTapped(SkillBlockTappedEvent evt)
+        => HandleSkillBlockTappedAsync(evt).Forget();
+
+    private async UniTaskVoid HandleSkillBlockTappedAsync(SkillBlockTappedEvent evt)
     {
         var hero = _party.GetHeroByColor(evt.Color);
         if (hero == null || hero.IsDead) return;
 
-        // 1. 십자 모양 블록 파괴
+        // 1. 십자 모양 블록 파괴 (모델만)
         var destroyed = _boardController.Board.ClearCrossPattern(evt.Col, evt.Row);
-        EventBus.Publish(new GravityRefillEvent
+
+        // 2. 파문형 애니메이션 이벤트 발행 (뷰 연출)
+        EventBus.Publish(new SkillBlockCrossDestroyEvent
         {
-            PreGravityClearedCells = destroyed,
-            GravityMoves           = _boardController.Board.ApplyGravity(),
-            RefillMoves            = _boardController.Board.Refill()
+            CenterCol      = evt.Col,
+            CenterRow      = evt.Row,
+            CrossPositions = destroyed
         });
 
-        // 2. UniqueSkill 즉시 발동
+        // 3. UniqueSkill 즉시 발동
         _skillSystem.ExecuteUniqueSkill(hero);
 
-        // 3. 보드 캐스케이드 후처리 (비동기)
-        _boardController.ProcessCascadeAsync().Forget();
+        // 4. 파괴 애니메이션이 끝날 때까지 대기 후 중력 처리
+        await UniTask.Delay(TimeSpan.FromSeconds(Constants.DESTROY_ANIM_DURATION + 0.1f));
+
+        var gravityMoves = _boardController.Board.ApplyGravity();
+        var refillMoves  = _boardController.Board.Refill();
+        EventBus.Publish(new GravityRefillEvent
+        {
+            GravityMoves = gravityMoves,
+            RefillMoves  = refillMoves
+        });
+
+        // 5. 보드 캐스케이드 후처리
+        await _boardController.ProcessCascadeAsync();
     }
 
     private void Cleanup()
@@ -352,6 +387,6 @@ public class BattleManager
             _party.OnAllDead -= HandleAllHeroesDead;
         }
         if (_currentWave != null)
-            _currentWave.OnAllEnemiesDead -= HandleAllEnemiesDead;
+            _currentWave.OnAllEnemiesDead -= OnAllEnemiesDeadHandler;
     }
 }

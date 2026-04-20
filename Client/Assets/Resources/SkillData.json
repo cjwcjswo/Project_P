@@ -1,113 +1,215 @@
 [
   {
     "Id": 5001,
-    "DisplayName": "회전 베기",
-    "EffectPrefabPath": "Effects/Skills/SpinSlash",
-    "ActionType": "Attack",
-    "TargetScope": "Multi",
-    "MaxTargetCount": 3,
-    "BaseMultiplier": 1.5,
-    "StatusEffects": [
-      { "EffectType": "Stun",    "Value": 0.0, "Duration": 1.5, "Probability": 0.3 },
-      { "EffectType": "DefDown", "Value": 0.2, "Duration": 5.0, "Probability": 1.0 }
+    "DisplayName": "화염 베기",
+    "EffectPrefabPath": "Effects/Skills/FlameSlash",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "Front", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 1.5,
+        "StatusEffects": []
+      }
     ]
   },
   {
     "Id": 5002,
-    "DisplayName": "힐링 라이트",
-    "EffectPrefabPath": "Effects/Skills/HealLight",
-    "ActionType": "Heal",
-    "TargetScope": "Single",
-    "MaxTargetCount": 1,
-    "BaseMultiplier": 2.0,
-    "StatusEffects": []
+    "DisplayName": "십자 화염참",
+    "EffectPrefabPath": "Effects/Skills/CrossFlame",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "Front", "MaxCount": 3, "TargetIndex": 0 },
+        "BaseMultiplier": 2.2,
+        "StatusEffects": [
+          { "EffectType": "Burn", "Value": 0.1, "Duration": 3.0, "Probability": 1.0 }
+        ]
+      }
+    ]
   },
   {
     "Id": 5003,
-    "DisplayName": "수호의 방패",
-    "EffectPrefabPath": "Effects/Skills/Shield",
-    "ActionType": "Shield",
-    "TargetScope": "Single",
-    "MaxTargetCount": 1,
-    "BaseMultiplier": 1.8,
-    "StatusEffects": []
+    "DisplayName": "진·홍련의 검",
+    "EffectPrefabPath": "Effects/Skills/CrimsonBlade",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "All", "MaxCount": 0, "TargetIndex": 0 },
+        "BaseMultiplier": 3.5,
+        "StatusEffects": [
+          { "EffectType": "DefDown", "Value": 0.3, "Duration": 5.0, "Probability": 1.0 }
+        ]
+      }
+    ]
   },
   {
     "Id": 5004,
-    "DisplayName": "전투 함성",
-    "EffectPrefabPath": "Effects/Skills/Buff",
-    "ActionType": "Buff",
-    "TargetScope": "All",
-    "MaxTargetCount": 0,
-    "BaseMultiplier": 0.3,
-    "StatusEffects": [
-      { "EffectType": "AtkUp", "Value": 0.2, "Duration": 8.0, "Probability": 1.0 }
+    "DisplayName": "응급 붕대",
+    "EffectPrefabPath": "Effects/Skills/BandageHeal",
+    "Actions": [
+      {
+        "ActionType": "Heal",
+        "Target": { "Team": "Ally", "Strategy": "LowestHP", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 2.0,
+        "StatusEffects": []
+      }
     ]
   },
   {
     "Id": 5005,
-    "DisplayName": "정의의 일격",
-    "EffectPrefabPath": "Effects/Skills/HeavyStrike",
-    "ActionType": "Attack",
-    "TargetScope": "Single",
-    "MaxTargetCount": 1,
-    "BaseMultiplier": 2.5,
-    "StatusEffects": []
+    "DisplayName": "마도서 내려찍기",
+    "EffectPrefabPath": "Effects/Skills/BookSmash",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "Front", "MaxCount": 2, "TargetIndex": 0 },
+        "BaseMultiplier": 1.8,
+        "StatusEffects": [
+          { "EffectType": "Stun", "Value": 0.0, "Duration": 1.0, "Probability": 0.2 }
+        ]
+      }
+    ]
   },
   {
     "Id": 5006,
-    "DisplayName": "심판의 강타",
-    "EffectPrefabPath": "Effects/Skills/JudgeStrike",
-    "ActionType": "Attack",
-    "TargetScope": "Single",
-    "MaxTargetCount": 1,
-    "BaseMultiplier": 3.5,
-    "StatusEffects": [
-      { "EffectType": "Stun", "Value": 0.0, "Duration": 2.0, "Probability": 0.5 }
+    "DisplayName": "독 바른 단검",
+    "EffectPrefabPath": "Effects/Skills/PoisonDagger",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "LowestHP", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 1.6,
+        "StatusEffects": [
+          { "EffectType": "Burn", "Value": 0.05, "Duration": 5.0, "Probability": 1.0 }
+        ]
+      }
     ]
   },
   {
     "Id": 5007,
-    "DisplayName": "성스러운 빛",
-    "EffectPrefabPath": "Effects/Skills/HolyLight",
-    "ActionType": "Heal",
-    "TargetScope": "All",
-    "MaxTargetCount": 0,
-    "BaseMultiplier": 1.5,
-    "StatusEffects": []
+    "DisplayName": "그림자 꿰뚫기",
+    "EffectPrefabPath": "Effects/Skills/ShadowPierce",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "Back", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 3.0,
+        "StatusEffects": [
+          { "EffectType": "AtkDown", "Value": 0.2, "Duration": 3.0, "Probability": 1.0 }
+        ]
+      }
+    ]
   },
   {
     "Id": 5008,
-    "DisplayName": "절대 방어",
-    "EffectPrefabPath": "Effects/Skills/AbsoluteShield",
-    "ActionType": "Shield",
-    "TargetScope": "All",
-    "MaxTargetCount": 0,
-    "BaseMultiplier": 2.5,
-    "StatusEffects": []
+    "DisplayName": "맹인 검객의 일격",
+    "EffectPrefabPath": "Effects/Skills/BlindStrike",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "Random", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 1.7,
+        "StatusEffects": []
+      }
+    ]
   },
   {
     "Id": 5009,
-    "DisplayName": "신의 철퇴",
-    "EffectPrefabPath": "Effects/Skills/DivineMace",
-    "ActionType": "Attack",
-    "TargetScope": "All",
-    "MaxTargetCount": 0,
-    "BaseMultiplier": 4.0,
-    "StatusEffects": [
-      { "EffectType": "DefDown", "Value": 0.3, "Duration": 8.0, "Probability": 1.0 }
+    "DisplayName": "심안 각성",
+    "EffectPrefabPath": "Effects/Skills/MindEyeBuff",
+    "Actions": [
+      {
+        "ActionType": "Buff",
+        "Target": { "Team": "Ally", "Strategy": "Self", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 0.0,
+        "StatusEffects": [
+          { "EffectType": "AtkUp", "Value": 0.4, "Duration": 8.0, "Probability": 1.0 }
+        ]
+      }
     ]
   },
   {
     "Id": 5010,
-    "DisplayName": "불굴의 성벽",
-    "EffectPrefabPath": "Effects/Skills/IronWall",
-    "ActionType": "Buff",
-    "TargetScope": "All",
-    "MaxTargetCount": 0,
-    "BaseMultiplier": 0.5,
-    "StatusEffects": [
-      { "EffectType": "AtkUp", "Value": 0.3, "Duration": 10.0, "Probability": 1.0 }
+    "DisplayName": "미니 파이어볼",
+    "EffectPrefabPath": "Effects/Skills/MiniFireball",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "Random", "MaxCount": 2, "TargetIndex": 0 },
+        "BaseMultiplier": 1.4,
+        "StatusEffects": []
+      }
+    ]
+  },
+  {
+    "Id": 5011,
+    "DisplayName": "메테오 스트라이크",
+    "EffectPrefabPath": "Effects/Skills/MeteorStrike",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "All", "MaxCount": 0, "TargetIndex": 0 },
+        "BaseMultiplier": 2.8,
+        "StatusEffects": [
+          { "EffectType": "Burn", "Value": 0.15, "Duration": 4.0, "Probability": 0.8 }
+        ]
+      }
+    ]
+  },
+  {
+    "Id": 5012,
+    "DisplayName": "정령의 위로",
+    "EffectPrefabPath": "Effects/Skills/SpiritComfort",
+    "Actions": [
+      {
+        "ActionType": "Heal",
+        "Target": { "Team": "Ally", "Strategy": "LowestHP", "MaxCount": 2, "TargetIndex": 0 },
+        "BaseMultiplier": 1.8,
+        "StatusEffects": []
+      }
+    ]
+  },
+  {
+    "Id": 5013,
+    "DisplayName": "세계수의 방패",
+    "EffectPrefabPath": "Effects/Skills/WorldTreeShield",
+    "Actions": [
+      {
+        "ActionType": "Shield",
+        "Target": { "Team": "Ally", "Strategy": "All", "MaxCount": 0, "TargetIndex": 0 },
+        "BaseMultiplier": 1.5,
+        "StatusEffects": [
+          { "EffectType": "DefUp", "Value": 0.2, "Duration": 5.0, "Probability": 1.0 }
+        ]
+      }
+    ]
+  },
+  {
+    "Id": 5014,
+    "DisplayName": "은신 타격",
+    "EffectPrefabPath": "Effects/Skills/StealthStrike",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "HighestAtk", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 2.0,
+        "StatusEffects": []
+      }
+    ]
+  },
+  {
+    "Id": 5015,
+    "DisplayName": "급소 찌르기",
+    "EffectPrefabPath": "Effects/Skills/FatalThrust",
+    "Actions": [
+      {
+        "ActionType": "Attack",
+        "Target": { "Team": "Enemy", "Strategy": "HighestAtk", "MaxCount": 1, "TargetIndex": 0 },
+        "BaseMultiplier": 3.2,
+        "StatusEffects": [
+          { "EffectType": "Stun", "Value": 0.0, "Duration": 1.5, "Probability": 0.7 }
+        ]
+      }
     ]
   }
 ]

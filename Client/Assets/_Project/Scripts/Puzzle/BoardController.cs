@@ -76,6 +76,22 @@ public class BoardController
                     clearPositions.Remove(cell);
             }
 
+            // 매칭 제거 대상 중 스킬 블록이 있으면 십자 범위 추가 파괴
+            var skillCrossExtra = new List<(int col, int row)>();
+            foreach (var pos in clearPositions.ToList())
+            {
+                if (!_board.IsSkillBlock(pos.col, pos.row)) continue;
+                var crossPositions = _board.GetCrossPatternPositions(pos.col, pos.row);
+                foreach (var cp in crossPositions)
+                {
+                    if (!clearPositions.Contains(cp))
+                    {
+                        clearPositions.Add(cp);
+                        skillCrossExtra.Add(cp);
+                    }
+                }
+            }
+
             int blocksInStep = clearPositions.Count;
             totalBlocks += blocksInStep;
 
@@ -92,10 +108,11 @@ public class BoardController
 
             EventBus.Publish(new MatchFoundEvent
             {
-                Matches                  = matches,
-                ComboStep                = combo,
-                BlocksMatchedInStep      = blocksInStep,
-                PreservedSkillBlockCells = preservedSkillCells
+                Matches                    = matches,
+                ComboStep                  = combo,
+                BlocksMatchedInStep        = blocksInStep,
+                PreservedSkillBlockCells   = preservedSkillCells,
+                SkillCrossDestroyPositions = skillCrossExtra
             });
 
             _board.ClearBlocks(clearPositions);
@@ -194,6 +211,22 @@ public class BoardController
                 .Distinct()
                 .ToList();
 
+            // 매칭 제거 대상 중 스킬 블록이 있으면 십자 범위 추가 파괴
+            var skillCrossExtra = new List<(int col, int row)>();
+            foreach (var pos in clearPositions.ToList())
+            {
+                if (!_board.IsSkillBlock(pos.col, pos.row)) continue;
+                var crossPositions = _board.GetCrossPatternPositions(pos.col, pos.row);
+                foreach (var cp in crossPositions)
+                {
+                    if (!clearPositions.Contains(cp))
+                    {
+                        clearPositions.Add(cp);
+                        skillCrossExtra.Add(cp);
+                    }
+                }
+            }
+
             int blocksInStep = clearPositions.Count;
             totalBlocks += blocksInStep;
 
@@ -210,10 +243,11 @@ public class BoardController
 
             EventBus.Publish(new MatchFoundEvent
             {
-                Matches                  = matches,
-                ComboStep                = combo,
-                BlocksMatchedInStep      = blocksInStep,
-                PreservedSkillBlockCells = new List<(int col, int row)>()
+                Matches                    = matches,
+                ComboStep                  = combo,
+                BlocksMatchedInStep        = blocksInStep,
+                PreservedSkillBlockCells   = new List<(int col, int row)>(),
+                SkillCrossDestroyPositions = skillCrossExtra
             });
 
             _board.ClearBlocks(clearPositions);

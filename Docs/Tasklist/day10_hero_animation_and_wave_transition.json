@@ -1,0 +1,99 @@
+{
+  "phase": "Day 10 - 히어로 애니메이션 & 웨이브 전환 연출",
+  "description": "전투 내 히어로의 상태별 애니메이션(Idle/Attack/Skill/Run/Death)을 Animator Controller 기반으로 구현하고, 웨이브 클리어 시 히어로의 Run 애니메이션과 배경 스크롤을 조합한 이동 연출을 추가한다. 기존 DOTween 스프라이트 트윈에서 Animator State Machine으로 전환하며, BattleManager 의 웨이브 전환 흐름에 비동기 연출 단계를 삽입한다.",
+  "tasks": [
+    {
+      "id": "T-D10-001",
+      "title": "Hero Animator Controller 에셋 생성 및 상태 머신 설계",
+      "description": "Unity 에디터에서 Hero 공용 Animator Controller 에셋을 생성하고, 전투에 필요한 5개 상태와 전환 조건을 설정한다.\n\n에셋 경로: Client/Assets/_Project/Animations/Hero/HeroAnimator.controller\n\n1. 상태(State) 정의:\n   - Idle : 기본 대기 루프 (Has Exit Time: false, Loop: true)\n   - Attack : 평타 1회 재생 후 Idle로 복귀 (Has Exit Time: true)\n   - Skill : 스킬 발동 1회 재생 후 Idle로 복귀 (Has Exit Time: true)\n   - Run : 루프 재생, 웨이브 전환 이동용 (Loop: true)\n   - Death : 1회 재생 후 최종 프레임 고정 (Has Exit Time: true, Loop: false)\n\n2. Parameter 정의:\n   - Trigger Attack\n   - Trigger Skill\n   - Trigger Run\n   - Trigger BackToIdle  (Run → Idle 복귀용)\n   - Bool IsDead\n\n3. 전환 규칙:\n   - Any State → Death : IsDead == true (Can Transition To Self: false)\n   - Idle → Attack : Trigger Attack\n   - Idle → Skill : Trigger Skill\n   - Idle → Run : Trigger Run\n   - Attack → Idle : Has Exit Time (애니메이션 끝)\n   - Skill → Idle : Has Exit Time\n   - Run → Idle : Trigger BackToIdle\n\n4. 애니메이션 클립 연결:\n   - 현재 Animations/Hero/Test/ 폴더의 테스트 클립이 있으면 임시 연결.\n   - 실제 스프라이트 시트 기반 클립은 별도 태스크(T-D10-002)에서 작성.\n   - 클립 부재 시 임시로 빈 Animation Clip을 생성하여 상태 슬롯을 채운다.\n\n5. HeroEntityView 프리팹에 Animator 컴포넌트 추가:\n   - Controller: HeroAnimator.controller 할당\n   - Update Mode: Unscaled Time",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Animations/Hero/HeroAnimator.controller",
+        "Client/Assets/_Project/Prefabs/Battle/HeroEntity.prefab"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D10-002",
+      "title": "Hero 스프라이트 시트 기반 Animation Clip 생성",
+      "description": "Client/Assets/_Project/Sprites/Hero/ 경로에 있는 히어로 스프라이트를 사용하여 Animation Clip 5종을 생성한다. 현재 스프라이트가 단일 이미지 수준이면 가짜 클립(동일 프레임 2~3장 루프)으로 대체한다.\n\n1. 클립 생성 위치: Client/Assets/_Project/Animations/Hero/Clips/\n   - Hero_Idle.anim : SpriteRenderer.sprite 키프레임 (Idle 프레임 루프, 8fps)\n   - Hero_Attack.anim : 공격 프레임 시퀀스 (12fps, 0.4s)\n   - Hero_Skill.anim : 스킬 발동 프레임 시퀀스 (12fps, 0.6s)\n   - Hero_Run.anim : 달리기 프레임 루프 (12fps)\n   - Hero_Death.anim : 사망 프레임 시퀀스 (8fps, 0.6s, 마지막 프레임 고정)\n\n2. 스프라이트 부재 시 최소 구현:\n   - 단일 스프라이트를 재사용하되, Attack/Skill 클립은 SpriteRenderer.color를 트윈하는 커브 추가(노란 플래시 0.1s → 원복).\n   - Run 클립은 transform.position.x에 작은 ±0.02 흔들림 커브 추가.\n\n3. HeroAnimator.controller의 각 State에 해당 클립 할당.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Animations/Hero/Clips/Hero_Idle.anim",
+        "Client/Assets/_Project/Animations/Hero/Clips/Hero_Attack.anim",
+        "Client/Assets/_Project/Animations/Hero/Clips/Hero_Skill.anim",
+        "Client/Assets/_Project/Animations/Hero/Clips/Hero_Run.anim",
+        "Client/Assets/_Project/Animations/Hero/Clips/Hero_Death.anim"
+      ],
+      "dependencies": ["T-D10-001"]
+    },
+    {
+      "id": "T-D10-003",
+      "title": "HeroEntityView — Animator 기반 재생 메서드 전환",
+      "description": "HeroEntityView.cs를 Animator 기반으로 전환한다. 기존 DOPunchPosition 평타 연출은 Trigger 방식으로 교체하고, 스킬 전용 PlaySkillAnim() 메서드를 신규 추가한다.\n\n1. 필드 추가:\n   ```csharp\n   [SerializeField] private Animator _animator;\n   ```\n\n2. 메서드 변경:\n   - PlayAttackAnim():\n     기존: transform.DOPunchPosition(…)\n     변경: _animator.SetTrigger(\"Attack\");\n\n   - PlaySkillAnim() [신규]:\n     _animator.SetTrigger(\"Skill\");\n\n   - PlayRunAnim() [신규]:\n     _animator.SetTrigger(\"Run\");\n\n   - StopRunAnim() [신규]:\n     _animator.SetTrigger(\"BackToIdle\");\n\n   - PlayDeathAnim() [변경]:\n     기존: DOTween 회색화 시퀀스\n     변경: _animator.SetBool(\"IsDead\", true);\n     ※ Death 클립에 색상 커브를 포함하거나, DOTween 시퀀스 병행 가능.\n\n3. DOTween 의존 제거:\n   - DG.Tweening using 제거 (FlashColor 헬퍼는 PlayColorFlash/PlayDamageFlash에서만 사용 중이면 유지).\n   - PlayColorFlash, PlayDamageFlash는 DOTween 색상 트윈을 그대로 유지 (Animator 미관여).\n\n4. Reset() 헬퍼 갱신:\n   ```csharp\n   private void Reset()\n   {\n       _spriteRenderer = GetComponent<SpriteRenderer>();\n       _animator       = GetComponent<Animator>();\n   }\n   ```",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/HeroEntityView.cs"
+      ],
+      "dependencies": ["T-D10-001"]
+    },
+    {
+      "id": "T-D10-004",
+      "title": "BattleSceneView — 스킬 애니메이션 트리거 연결",
+      "description": "BattleSceneView.OnSkillExecuted에서 ActionType.Attack 외 Skill 계열(Heal/Shield/Buff/Attack)에 대한 Animator 트리거를 올바르게 구분한다.\n\n1. OnSkillExecuted 분기 수정:\n   - ActionType.Attack : srcHeroView?.PlayAttackAnim() (기존 유지)\n   - ActionType.Heal, Shield, Buff : srcHeroView?.PlaySkillAnim() [신규 호출]\n   - 단, Attack + MaxCount >= 모든 적 수(AoE) → PlaySkillAnim()으로 격상\n     (대규모 공격은 일반 평타보다 스킬 연출이 자연스럽기 때문)\n\n2. 변경 후 분기 예시:\n   ```csharp\n   bool isMassAttack = effect.ActionType == ActionType.Attack &&\n                       (effect.Strategy == TargetStrategy.All ||\n                        (effect.MaxCount > 1 && effect.MaxCount >= _enemyViews.Count));\n\n   if (isMassAttack || effect.ActionType != ActionType.Attack)\n       srcHeroView?.PlaySkillAnim();\n   else\n       srcHeroView?.PlayAttackAnim();\n   ```\n\n3. 나머지 로직(AoE/싱글 적 플래시, 스킬 텍스트 팝업)은 변경 없이 유지.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": ["T-D10-003"]
+    },
+    {
+      "id": "T-D10-005",
+      "title": "BackgroundScrollView — 배경 스크롤 컴포넌트 구현",
+      "description": "웨이브 전환 시 배경을 가로 방향으로 스크롤하는 전용 MonoBehaviour를 신규 작성한다.\n\n경로: Client/Assets/_Project/Scripts/UI/BackgroundScrollView.cs\n\n1. 설계 원칙:\n   - 배경 오브젝트(SpriteRenderer 또는 RawImage)의 오프셋/위치를 DOTween으로 이동.\n   - 씬에 배경 레이어가 없을 경우 null 안전하게 스킵 (프로덕션 배경 제작 전 빌드 깨짐 방지).\n\n2. 주요 필드:\n   ```csharp\n   [SerializeField] private Transform[] _bgLayers;      // 원경/중경/근경 레이어\n   [SerializeField] private float[]     _layerSpeedMultipliers; // 패럴랙스 속도 배수\n   [SerializeField] private float       _scrollDistance = 12f;  // 스크롤 총 이동거리(월드)\n   [SerializeField] private float       _scrollDuration = 1.2f; // 스크롤 소요 시간(초)\n   ```\n\n3. ScrollAsync(CancellationToken ct) : UniTask\n   - 각 레이어를 layerSpeedMultipliers[i] * _scrollDistance 만큼 왼쪽(-X)으로 DOMove.\n   - 레이어별 Ease: Ease.InOutSine.\n   - 모든 레이어 트윈 완료를 await DOTween.ToUniTask()로 기다린다.\n   - _bgLayers가 비어있으면 UniTask.Delay(_scrollDuration)으로 대기 후 반환.\n\n4. ResetPositions() : 스크롤 후 레이어 원위치 (순간 텔레포트). 다음 웨이브 전환 준비.\n\n5. 씬에서 BattleSceneView와 동일한 게임 오브젝트 또는 자식에 부착.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BackgroundScrollView.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D10-006",
+      "title": "BattleManager — 웨이브 전환 전 비동기 콜백 주입",
+      "description": "BattleManager.HandleAllEnemiesDead에 View 측 전환 연출을 기다리는 비동기 단계를 삽입한다.\n\n1. 신규 필드:\n   ```csharp\n   // 웨이브 전환 연출을 담당하는 외부 콜백. BattleSceneManager에서 주입.\n   public Func<int, UniTask> OnWaveTransitionRequested;\n   ```\n\n2. HandleAllEnemiesDead → async UniTaskVoid 전환:\n   ```csharp\n   private async UniTaskVoid HandleAllEnemiesDeadAsync()\n   {\n       int nextIndex = _currentWaveIndex + 1;\n       if (nextIndex < _setupData.Waves.Length)\n       {\n           // View 연출 대기 (미등록 시 즉시 통과)\n           if (OnWaveTransitionRequested != null)\n               await OnWaveTransitionRequested.Invoke(nextIndex);\n\n           _currentWaveIndex = nextIndex;\n           ActivateWave(_setupData.Waves[_currentWaveIndex]);\n       }\n       else\n       {\n           _cts?.Cancel();\n           var result = BuildBattleResult(isCleared: true);\n           OnBattleWin?.Invoke();\n           EventBus.Publish(new BattleCompleteEvent { Result = result });\n           Cleanup();\n       }\n   }\n   ```\n\n3. EnemyWave.OnAllEnemiesDead 구독부를 기존 void → async void 래퍼로 변경:\n   ```csharp\n   _currentWave.OnAllEnemiesDead += () => HandleAllEnemiesDeadAsync().Forget();\n   ```\n\n4. 기존 void HandleAllEnemiesDead() 제거.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs"
+      ],
+      "dependencies": ["T-D10-005"]
+    },
+    {
+      "id": "T-D10-007",
+      "title": "BattleSceneView — WaveTransitionAsync 구현",
+      "description": "BattleSceneView에 웨이브 전환 연출을 수행하는 WaveTransitionAsync 메서드를 추가한다. BattleSceneManager가 이를 BattleManager.OnWaveTransitionRequested에 연결한다.\n\n1. 필드 추가:\n   ```csharp\n   [Header(\"Wave Transition\")]\n   [SerializeField] private BackgroundScrollView _backgroundScroll;\n   ```\n\n2. WaveTransitionAsync(int nextWaveIndex) : UniTask [신규 public 메서드]\n   ```csharp\n   public async UniTask WaveTransitionAsync(int nextWaveIndex)\n   {\n       // 1. 모든 살아있는 히어로 Run 애니메이션 재생\n       foreach (var heroView in _heroViews.Values)\n           heroView.PlayRunAnim();\n\n       // 2. 배경 스크롤 (없으면 스킵)\n       if (_backgroundScroll != null)\n           await _backgroundScroll.ScrollAsync(default);\n       else\n           await UniTask.Delay(TimeSpan.FromSeconds(1.2f));\n\n       // 3. 히어로 Run → Idle 복귀\n       foreach (var heroView in _heroViews.Values)\n           heroView.StopRunAnim();\n\n       // 4. 잠깐 대기 후 적 교체 (OnWaveChanged 이벤트는 ActivateWave에서 발행됨)\n       await UniTask.Delay(TimeSpan.FromSeconds(0.3f));\n   }\n   ```\n\n3. OnWaveChanged: 기존 적 뷰 교체 로직 유지. 단, WaveTransitionAsync가 먼저 완료된 뒤 ActivateWave가 OnWaveChanged를 발행하므로, 히어로 Run 종료 후 새 적이 등장하는 순서가 자연스럽게 보장됨.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": ["T-D10-003", "T-D10-005", "T-D10-006"]
+    },
+    {
+      "id": "T-D10-008",
+      "title": "BattleSceneManager — 전환 콜백 연결",
+      "description": "BattleSceneManager.InitializeBattleAsync에서 BattleManager.OnWaveTransitionRequested에 BattleSceneView.WaveTransitionAsync를 연결한다.\n\n1. 5번 UI 바인딩 블록 내에 아래 한 줄 추가:\n   ```csharp\n   _battleManager.OnWaveTransitionRequested = _battleSceneView.WaveTransitionAsync;\n   ```\n\n2. 연결 위치: _battleSceneView.BindBattleManager(_battleManager) 호출 직후.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Core/BattleSceneManager.cs"
+      ],
+      "dependencies": ["T-D10-006", "T-D10-007"]
+    }
+  ]
+}

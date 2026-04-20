@@ -13,6 +13,9 @@ public class HeroState
     public BlockType MappedColor => HeroColorMap.GetBlockType(PartyIndex);
     public bool IsDead => CurrentHP <= 0;
 
+    // ── 모델/리소스 ─────────────────────────────────────────────────────────
+    public string PrefabPath { get; private set; }
+
     // ── 직업 / 등급 / 스킬 ────────────────────────────────────────────────
     public HeroClass HeroClass { get; private set; }
     public int Grade { get; private set; }
@@ -76,6 +79,7 @@ public class HeroState
                      int growthMaxHP = 0, int growthAttack = 0, int growthDefense = 0,
                      int level = 1,
                      int partyIndex = 0,
+                     string prefabPath = "",
                      HeroSkill matchSkill = null,
                      HeroSkill uniqueSkill = null,
                      HeroSkill ultimateSkill = null,
@@ -86,6 +90,7 @@ public class HeroState
     {
         Level = Math.Max(1, level);
         PartyIndex = partyIndex;
+        PrefabPath = prefabPath ?? "";
         AutoAttackInterval = autoAttackInterval;
         AutoAttackRatio = autoAttackRatio;
         HeroClass = heroClass;

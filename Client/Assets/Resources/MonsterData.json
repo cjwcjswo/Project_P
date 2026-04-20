@@ -2,7 +2,7 @@
   {
     "Id": 1001,
     "DisplayName": "초보자 슬라임",
-    "PrefabPath": "Monsters/Slime_Green",
+    "PrefabPath": "Monsters/Test",
     "MaxHP": 500,
     "Attack": 50,
     "SkillCooldown": 8.0,
@@ -14,7 +14,7 @@
   {
     "Id": 1002,
     "DisplayName": "강화 슬라임",
-    "PrefabPath": "Monsters/Slime_Red",
+    "PrefabPath": "Monsters/Test",
     "MaxHP": 800,
     "Attack": 70,
     "SkillCooldown": 10.0,
@@ -26,7 +26,7 @@
   {
     "Id": 2005,
     "DisplayName": "화염 오크",
-    "PrefabPath": "Monsters/Orc_Fire",
+    "PrefabPath": "Monsters/Test",
     "MaxHP": 2500,
     "Attack": 120,
     "SkillCooldown": 12.0,
@@ -38,7 +38,7 @@
   {
     "Id": 2006,
     "DisplayName": "어둠의 고블린",
-    "PrefabPath": "Monsters/Goblin_Dark",
+    "PrefabPath": "Monsters/Test",
     "MaxHP": 1200,
     "Attack": 90,
     "SkillCooldown": 9.0,

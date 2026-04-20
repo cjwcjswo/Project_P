@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -17,13 +18,16 @@ using DG.Tweening;
 /// </summary>
 public class HeroHUDView : MonoBehaviour
 {
-    [SerializeField] private Image      _portraitImage;
-    [SerializeField] private Image      _hpFill;
-    [SerializeField] private Image      _shieldFill;
-    [SerializeField] private Image      _ultGaugeFill;
-    [SerializeField] private GameObject _ultReadyEffect;
-    [SerializeField] private Button     _portraitButton;
-    [SerializeField] private GameObject _deadOverlay;
+    [SerializeField] private Image           _portraitImage;
+    [SerializeField] private Image           _hpFill;
+    [SerializeField] private TextMeshProUGUI _hpText;
+    [SerializeField] private Image           _shieldFill;
+    [SerializeField] private Image           _ultGaugeFill;
+    [SerializeField] private GameObject      _ultReadyEffect;
+    [SerializeField] private Button          _portraitButton;
+    [SerializeField] private GameObject      _deadOverlay;
+    [Tooltip("초상화 위에 겹쳐지는 블록 타입 색상 테두리 Image. 9-Slice 정사각 테두리 스프라이트 사용.")]
+    [SerializeField] private Image           _portraitBorder;
 
     private UltimateGaugeManager _ultManager;
     private int _heroIndex;
@@ -35,6 +39,11 @@ public class HeroHUDView : MonoBehaviour
 
         // 초기 상태 설정
         _hpFill.fillAmount   = 1f;
+        if (_hpText != null) _hpText.text = $"{hero.CurrentHP} / {hero.MaxHP}";
+
+        // 블록 타입 색상 테두리
+        if (_portraitBorder != null)
+            _portraitBorder.color = BlockTypeColors.Get(hero.MappedColor);
         _shieldFill.gameObject.SetActive(false);
         _ultGaugeFill.fillAmount = 0f;
         _ultReadyEffect.SetActive(false);
@@ -52,6 +61,7 @@ public class HeroHUDView : MonoBehaviour
         {
             float ratio = (float)cur / max;
             _hpFill.DOFillAmount(ratio, 0.3f);
+            if (_hpText != null) _hpText.text = $"{cur} / {max}";
         };
 
         // 실드
@@ -67,6 +77,14 @@ public class HeroHUDView : MonoBehaviour
             _portraitButton.interactable = false;
             _ultReadyEffect.SetActive(false);
             _ultGaugeFill.DOKill();
+            if (_portraitBorder != null)
+            {
+                _portraitBorder.DOKill();
+                var c = _portraitBorder.color;
+                c.a = 1f;
+                _portraitBorder.color = c;
+            }
+            if (_hpText != null) _hpText.text = $"0 / {hero.MaxHP}";
         };
 
         if (!hasUltimate) return;
@@ -94,6 +112,18 @@ public class HeroHUDView : MonoBehaviour
             _portraitButton.interactable = true;
             _ultGaugeFill.DOColor(new Color(1f, 0.6f, 0f), 0.5f)
                 .SetLoops(-1, LoopType.Yoyo);
+
+            if (_portraitBorder != null)
+            {
+                _portraitBorder.DOKill();
+                var c = _portraitBorder.color;
+                c.a = 1f;
+                _portraitBorder.color = c;
+                _portraitBorder
+                    .DOFade(0.3f, 0.5f)
+                    .SetEase(Ease.InOutSine)
+                    .SetLoops(-1, LoopType.Yoyo);
+            }
         };
 
         // 초상화 버튼 클릭 → 궁극기 발동
@@ -107,6 +137,14 @@ public class HeroHUDView : MonoBehaviour
             _ultGaugeFill.color = Color.white;
             // DOKill이 Activate 직후 시작된 DOFillAmount(0)까지 취소하므로 Fill을 즉시 0으로 맞춘다.
             _ultGaugeFill.fillAmount = 0f;
+
+            if (_portraitBorder != null)
+            {
+                _portraitBorder.DOKill();
+                var c = _portraitBorder.color;
+                c.a = 1f;
+                _portraitBorder.color = c;
+            }
         });
     }
 

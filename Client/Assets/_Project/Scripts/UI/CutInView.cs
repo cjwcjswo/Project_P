@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 3성 궁극기 발동 시 히어로 일러스트가 좌→우로 슬라이드 인/아웃하는 컷인 연출.
-/// BattleManager.ActivateUltimateAsync()에서 PlayAsync(Sprite)를 await.
+/// BattleManager.ActivateUltimateAsync()에서 PlayAsync(Sprite)를 Forget()으로 병행 재생.
 /// </summary>
 public class CutInView : MonoBehaviour
 {
@@ -20,7 +20,15 @@ public class CutInView : MonoBehaviour
 
     private void Awake()
     {
-        gameObject.SetActive(false);
+        // 씬에서 비활성(m_IsActive:0)이면 Awake는 첫 SetActive(true)까지 지연된다.
+        // PlayAsync가 SetActive(true)한 직후 이 Awake에서 다시 SetActive(false)를 호출하면
+        // 첫 궁극기 연출이 즉시 꺼져 보이지 않는다(두 번째부터는 Awake가 재실행되지 않아 정상).
+        if (_canvasGroup != null)
+        {
+            _canvasGroup.alpha           = 0f;
+            _canvasGroup.blocksRaycasts  = false;
+            _canvasGroup.interactable    = false;
+        }
     }
 
     /// <summary>

@@ -1,0 +1,122 @@
+﻿{
+  "phase": "Day 9 - 확장형 모듈식 스킬 시스템",
+  "description": "기존 단일 ActionType/TargetScope 기반 스킬 구조를 GDD v1.0 '확장형 모듈식 스킬 시스템'에 맞춰 Actions[] 배열 + Target 객체(Team/Strategy/MaxCount) 기반 모듈형으로 전환한다. 하나의 스킬이 여러 개의 독립 행동을 순차 실행하며, 8종 타겟팅 알고리즘을 통해 데이터만으로 복합 기믹을 구현할 수 있도록 한다.",
+  "tasks": [
+    {
+      "id": "T-D9-001",
+      "title": "SkillData.json 스키마 전환 — Actions 배열 + Target 객체",
+      "description": "기존 플랫 구조(ActionType, TargetScope, MaxTargetCount, BaseMultiplier, StatusEffects)를 GDD v1.0 모듈형 스키마로 전환한다.\n1. 기존 SkillData.json의 각 스킬을 Actions[] 배열 형태로 변환.\n   - 기존 필드(ActionType, TargetScope, MaxTargetCount, BaseMultiplier, StatusEffects)를 Action 객체 내부로 이동.\n   - TargetScope(Single/Multi/All)를 Target 객체 { Team, Strategy, MaxCount, TargetIndex }로 매핑:\n     * Attack + Single → { Team: \"Enemy\", Strategy: \"Front\", MaxCount: 1 }\n     * Attack + Multi  → { Team: \"Enemy\", Strategy: \"Front\", MaxCount: N }\n     * Attack + All    → { Team: \"Enemy\", Strategy: \"All\", MaxCount: 0 }\n     * Heal + Single   → { Team: \"Ally\", Strategy: \"Self\", MaxCount: 1 }\n     * Heal + Multi    → { Team: \"Ally\", Strategy: \"LowestHP\", MaxCount: N }\n     * Heal + All      → { Team: \"Ally\", Strategy: \"All\", MaxCount: 0 }\n     * Shield + Single → { Team: \"Ally\", Strategy: \"Self\", MaxCount: 1 }\n     * Shield + All    → { Team: \"Ally\", Strategy: \"All\", MaxCount: 0 }\n     * Buff + All      → { Team: \"Ally\", Strategy: \"All\", MaxCount: 0 }\n2. 기존 10종 스킬(5001~5010) 전부 변환.\n3. EffectPrefabPath 필드는 스킬 루트에 유지.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/Resources/SkillData.json"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D9-002",
+      "title": "SkillDataRepository 모듈형 데이터 클래스 재설계",
+      "description": "SkillDataRepository.cs의 직렬화 클래스를 GDD 모듈형 스키마에 맞춰 재설계한다.\n1. 기존 SkillData 클래스에서 ActionType, TargetScope, MaxTargetCount, BaseMultiplier, StatusEffects 필드 제거.\n2. 신규 직렬화 클래스 추가:\n   - `[Serializable] TargetData { string Team; string Strategy; int MaxCount; int TargetIndex; }`\n   - `[Serializable] ActionData { string ActionType; TargetData Target; float BaseMultiplier; List<StatusEffectData> StatusEffects; }`\n3. SkillData 클래스에 `List<ActionData> Actions` 필드 추가.\n4. 기존 StatusEffectData 클래스는 변경 없이 유지.\n5. Repository의 Load/GetById/GetAll 로직은 변경 불필요 (JsonUtility 자동 역직렬화).",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Data/SkillDataRepository.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D9-003",
+      "title": "TargetStrategy enum + TargetingSystem 8종 알고리즘 구현",
+      "description": "GDD 3절의 타겟팅 알고리즘 8종을 TargetingSystem에 구현한다.\n1. HeroSkill.cs 또는 별도 파일에 enum 추가:\n   ```\n   public enum TargetTeam { Ally, Enemy }\n   public enum TargetStrategy { Front, Back, LowestHP, HighestAtk, Self, FixedIndex, All, Random }\n   ```\n2. TargetingSystem.cs에 통합 메서드 추가:\n   ```\n   public List<T> Resolve<T>(List<T> candidates, TargetStrategy strategy, int maxCount, int fixedIndex = -1)\n   ```\n   - T는 ITargetable 인터페이스 (HP, Attack, Index 프로퍼티 필요) 또는 각각 오버로드.\n3. 각 Strategy 구현:\n   - Front: WaveIndex/PartyIndex 오름차순 정렬 → maxCount개\n   - Back: 내림차순 정렬 → maxCount개\n   - LowestHP: CurrentHP 비율 오름차순 → maxCount개\n   - HighestAtk: Attack 내림차순 → maxCount개\n   - Self: 시전자 본인 (호출측에서 주입)\n   - FixedIndex: 지정 인덱스의 대상, 사망 시 빈 리스트\n   - All: 전체 살아있는 대상 (maxCount 무시)\n   - Random: 살아있는 대상 중 UnityEngine.Random으로 maxCount개 셔플 선택\n4. 기존 GetPriorityTarget / GetHeroTarget 메서드는 유지하되, 내부적으로 Resolve를 호출하도록 리팩터링.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/HeroSkill.cs",
+        "Client/Assets/_Project/Scripts/Battle/TargetingSystem.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D9-004",
+      "title": "HeroSkill 멀티 액션 구조 전환",
+      "description": "HeroSkill 클래스를 단일 액션에서 Actions 배열 기반 모듈형으로 전환한다.\n1. 신규 클래스 추가:\n   ```\n   public class SkillAction {\n       public ActionType ActionType;\n       public TargetTeam Team;\n       public TargetStrategy Strategy;\n       public int MaxCount;\n       public int TargetIndex;\n       public float BaseMultiplier;\n       public List<StatusEffectData> StatusEffects;\n   }\n   ```\n2. HeroSkill 클래스 변경:\n   - 기존 ActionType, TargetScope, BaseMultiplier, MaxTargetCount, StatusEffects → 제거\n   - `List<SkillAction> Actions` 추가\n   - 하위 호환 프로퍼티: `ActionType => Actions[0].ActionType` (기존 참조 코드 최소 수정용, 전환 후 제거 가능)\n3. 기존 생성자를 Actions 리스트 기반으로 교체.\n4. HeroSkill.Name, 기타 메타 필드 유지.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/HeroSkill.cs"
+      ],
+      "dependencies": ["T-D9-003"]
+    },
+    {
+      "id": "T-D9-005",
+      "title": "DamageCalculator / SkillEffect 액션 단위 계산 전환",
+      "description": "DamageCalculator와 SkillEffect를 액션 단위로 재설계한다.\n1. SkillEffect 변경:\n   - 기존 TargetScope 필드 제거\n   - `TargetTeam Team`, `TargetStrategy Strategy`, `int MaxCount`, `int TargetIndex` 추가\n   - `SkillAction SourceAction` 참조 추가 (StatusEffects 접근용)\n2. DamageCalculator.Calculate 시그니처 변경:\n   ```\n   public static SkillEffect Calculate(SkillAction action, BlockType sourceColor,\n       int totalBlockCount, float comboMultiplier, int heroAttack)\n   ```\n   - SkillAction의 ActionType, BaseMultiplier 사용\n   - Target 정보(Team, Strategy, MaxCount, TargetIndex)를 SkillEffect에 복사\n3. 기존 HeroSkill 기반 Calculate 오버로드는 Actions[0]으로 위임하는 브릿지 유지 (전환기 호환).\n4. BattleSceneView.OnSkillExecuted에서 TargetScope → Strategy 매핑 수정.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/DamageCalculator.cs",
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs"
+      ],
+      "dependencies": ["T-D9-004"]
+    },
+    {
+      "id": "T-D9-006",
+      "title": "SkillSystem 순차 멀티 액션 실행 엔진",
+      "description": "SkillSystem을 Actions 배열 순차 실행 방식으로 전면 재설계한다.\n1. 핵심 실행 메서드 변경:\n   ```\n   public void ExecuteSkill(HeroSkill skill, HeroState sourceHero, BlockType color, int blockCount, float comboMultiplier)\n   {\n       foreach (var action in skill.Actions)\n       {\n           // GDD 5절: 각 Action 직전에 타겟 유효성 재검증\n           var effect = DamageCalculator.Calculate(action, color, blockCount, comboMultiplier, sourceHero.Attack);\n           var targets = ResolveTargets(action, sourceHero);\n           ApplyEffect(effect, targets, sourceHero);\n       }\n   }\n   ```\n2. ResolveTargets 구현:\n   - action.Team == Enemy → _enemies.AliveEnemies를 후보로\n   - action.Team == Ally → _party.GetAliveHeroes()를 후보로\n   - action.Strategy == Self → sourceHero만 반환\n   - 그 외 → _targeting.Resolve(candidates, action.Strategy, action.MaxCount, action.TargetIndex)\n3. ApplyEffect: ActionType별 분기 (Attack → TakeDamage, Heal → Heal, Shield → AddShield, Buff → ApplyStatusEffect)\n4. 기존 ExecuteAttack/ExecuteHeal/ExecuteShield/ExecuteBuff private 메서드를 새 구조에 맞게 리팩터링.\n5. ExecuteFromCascade: hero.MatchSkill.Actions를 순차 실행하도록 변경.\n6. ExecuteUniqueSkill / ExecuteUltimateSkill: 동일 패턴 적용.\n7. StatusEffects 적용: 각 Action의 StatusEffects를 해당 Action의 타겟에게 적용.\n8. OnSkillExecuted 이벤트: 첫 번째 액션 기준 또는 액션별 발행 결정 (뷰 호환 고려).",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/SkillSystem.cs"
+      ],
+      "dependencies": ["T-D9-003", "T-D9-004", "T-D9-005"]
+    },
+    {
+      "id": "T-D9-007",
+      "title": "HeroFactory 신규 스키마 파싱",
+      "description": "HeroFactory.BuildSkill을 신규 모듈형 스키마에 맞춰 수정한다.\n1. BuildSkill 메서드 변경:\n   - SkillData.Actions 배열을 순회하며 각 ActionData → SkillAction 변환\n   - ActionData.ActionType → Enum.TryParse<ActionType>\n   - ActionData.Target.Team → Enum.TryParse<TargetTeam>\n   - ActionData.Target.Strategy → Enum.TryParse<TargetStrategy>\n   - ActionData.Target.MaxCount, TargetIndex 복사\n   - ActionData.BaseMultiplier, StatusEffects 복사\n2. HeroSkill 생성자에 List<SkillAction>과 Name을 전달.\n3. 기존 ActionType/TargetScope 파싱 로직 제거.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Data/HeroFactory.cs"
+      ],
+      "dependencies": ["T-D9-002", "T-D9-004"]
+    },
+    {
+      "id": "T-D9-008",
+      "title": "기존 참조 코드 호환성 수정",
+      "description": "SkillSystem 외부에서 HeroSkill/SkillEffect의 기존 필드를 참조하는 코드를 수정한다.\n1. BattleSceneView.OnSkillExecuted: SkillEffect.TargetScope → SkillEffect.Strategy/Team 기반 분기로 수정. ActionType별 이펙트 색상/방향 결정 로직 유지.\n2. BattleManager: ExecuteUniqueSkill/ExecuteUltimateSkill 호출 시그니처가 변경되었으면 대응.\n3. SkillSystem.ExecuteFromCascade: ColorMatchData 기반 호출부 → 신규 ExecuteSkill 패턴으로 전환.\n4. 기존 TargetScope enum 제거 또는 [Obsolete] 마킹.\n5. 컴파일 오류 전수 확인 및 수정.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleSceneView.cs",
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs",
+        "Client/Assets/_Project/Scripts/Battle/SkillSystem.cs"
+      ],
+      "dependencies": ["T-D9-006"]
+    },
+    {
+      "id": "T-D9-009",
+      "title": "GDD 예시 복합 스킬 데이터 추가",
+      "description": "GDD 4절의 예시 스킬 2종을 SkillData.json에 추가하여 멀티 액션 스킬이 정상 동작하는지 검증한다.\n1. 예시 A — 6001 '성녀의 가호' (복합 지원):\n   - Action 0: Heal / Ally / FixedIndex(0) / MaxCount 1 / Multiplier 2.5\n   - Action 1: Buff / Ally / Self / StatusEffects [DefUp 0.5, 10s, 100%]\n2. 예시 B — 6002 '흡혈의 일격' (공방 일체):\n   - Action 0: Attack / Enemy / Front / MaxCount 2 / Multiplier 2.0\n   - Action 1: Heal / Ally / LowestHP / MaxCount 1 / Multiplier 1.5\n3. HeroData.json에서 테스트용 히어로 1~2명의 스킬 ID를 6001/6002로 교체하여 실제 전투에서 멀티 액션이 순차 발동되는지 확인.\n4. 테스트 후 히어로 스킬 ID 원복 또는 유지 결정.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/Resources/SkillData.json",
+        "Client/Assets/Resources/HeroData.json"
+      ],
+      "dependencies": ["T-D9-006", "T-D9-007"]
+    },
+    {
+      "id": "T-D9-010",
+      "title": "서버 API 스키마 동기화",
+      "description": "서버 인메모리 스킬 데이터를 클라이언트 신규 스키마와 동기화한다.\n1. Program.cs 스킬 DTO 변경:\n   - 기존 SkillMasterDto: ActionType, TargetScope, MaxTargetCount, BaseMultiplier, StatusEffects → 제거\n   - 신규 DTO 추가:\n     * `record TargetDto(string Team, string Strategy, int MaxCount, int TargetIndex = 0)`\n     * `record ActionDto(string ActionType, TargetDto Target, float BaseMultiplier, List<SkillEffectDto> StatusEffects)`\n   - SkillMasterDto에 `List<ActionDto> Actions` 추가\n2. skillDataDb 인메모리 리스트를 신규 스키마로 전환 (기존 10종 + 예시 2종).\n3. GET /api/skills 응답이 Actions[] 형태로 반환되는지 확인.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Server/ProjectP.Server/Program.cs"
+      ],
+      "dependencies": ["T-D9-001"]
+    }
+  ]
+}
+

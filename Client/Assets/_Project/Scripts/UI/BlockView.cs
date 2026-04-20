@@ -264,6 +264,25 @@ public class BlockView : MonoBehaviour
             .ToUniTask();
     }
 
+    /// <summary>
+    /// 탭 발동 십자 파괴용: delay 후 펀치 강조 → 수축 소멸.
+    /// 중심 블록은 delay=0, 팔 블록은 0.05s씩 지연하여 파문 효과.
+    /// </summary>
+    public UniTask AnimateCrossDestroy(float delay, Action onComplete = null)
+    {
+        var targetScale = transform.localScale;
+        return DOTween.Sequence()
+            .AppendInterval(delay)
+            .Append(transform.DOPunchScale(Vector3.one * 0.35f, 0.1f).SetEase(Ease.OutQuad))
+            .Append(transform.DOScale(Vector3.zero, Constants.DESTROY_ANIM_DURATION * 0.7f).SetEase(Ease.InBack))
+            .AppendCallback(() =>
+            {
+                gameObject.SetActive(false);
+                onComplete?.Invoke();
+            })
+            .ToUniTask();
+    }
+
     /// <summary>화면 위(fromPos)에서 toPos로 낙하하며 등장.</summary>
     public UniTask AnimateSpawn(Vector3 fromPos, Vector3 toPos, float duration = 0.3f)
     {

@@ -1,0 +1,79 @@
+{
+  "phase": "Day 8 - UI/UX 개선 및 스킬 블록 버그 수정",
+  "description": "전투 HUD 정보 강화(스테이지/웨이브 표시, 체력 텍스트, 쿨다운 UI, 콤보 배율 표시) 및 2성 고유 스킬 블록의 매칭 제거 시 십자 파괴 미발동 버그 수정과 탭 발동 애니메이션 개선을 수행한다.",
+  "tasks": [
+    {
+      "id": "T-D8-001",
+      "title": "스테이지/웨이브 현황 표시 UI 추가",
+      "description": "유저가 현재 진행 중인 스테이지 번호와 웨이브 번호를 전투 화면에서 확인할 수 있도록 HUD를 확장한다.\n1. BattleHUD.cs: `SetStageWave(int stage, int wave)` 공개 메서드 추가. TextMeshProUGUI 두 개(또는 포맷 문자열 하나)로 'Stage N - Wave M' 형식 표시.\n2. [Header(\"Stage/Wave\")] SerializeField 필드 추가: `_stageWaveText` (TextMeshProUGUI).\n3. BattleSceneManager 혹은 BattleSceneView에서 전투 초기화 시 `battleHUD.SetStageWave(stageId, waveIndex)` 호출.\n4. 웨이브 전환 시점(새 웨이브 시작 이벤트 또는 기존 웨이브 초기화 로직)에 텍스트가 갱신되도록 연동.\n5. 텍스트 위치: 화면 상단 중앙(Canvas 앵커 top-center) 권장.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleHUD.cs",
+        "Client/Assets/_Project/Scripts/Core/BattleSceneManager.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D8-002",
+      "title": "스킬 블록 매칭 제거 시 십자 파괴 미발동 버그 수정",
+      "description": "현재 고유 스킬 블록은 유저 탭으로만 십자 범위 파괴가 발동하고, 일반 매칭으로 블록이 제거될 때는 십자 파괴가 발생하지 않는 버그를 수정한다.\n1. Board.cs: `IsSkillBlock(col, row)` 및 `ClearCrossPattern(col, row, activeColors)` 메서드가 이미 존재함을 확인.\n2. BoardController.TrySwapAsync(): 매칭 처리 루프(`while (matches.Count > 0)`)에서 clearPositions를 산출할 때, 그 중 스킬 블록 위치를 별도 추출.\n   - `var skillBlocksInMatch = clearPositions.Where(p => _board.IsSkillBlock(p.col, p.row)).ToList();`\n3. ClearBlocks 호출 전에 각 스킬 블록에 대해 `ClearCrossPattern` 실행:\n   - 십자 범위 좌표를 수집해 clearPositions에 합산(중복 제거).\n   - PreGravityClearedCells 목록에 십자 파괴 좌표 포함하여 GravityRefillEvent로 View에 전달.\n4. ProcessCascadeAsync()에도 동일 로직 적용(궁극기/DisableColor 후 캐스케이드에서도 동일 버그 존재).\n5. 스킬 블록이 십자 파괴를 유발할 때 `SkillBlockTappedEvent`가 아닌 새 이벤트 `SkillBlockMatchedEvent` 혹은 기존 GravityRefillEvent의 PreGravityClearedCells를 재활용해 View에서 파괴 연출이 재생되게 한다.\n6. PuzzleBoardView: 십자 파괴된 블록들에도 `AnimateDestroy` 연출이 발생하는지 확인.",
+      "status": "completed",
+      "priority": "high",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Puzzle/BoardController.cs",
+        "Client/Assets/_Project/Scripts/Puzzle/Board.cs",
+        "Client/Assets/_Project/Scripts/Battle/Events.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D8-003",
+      "title": "스킬 블록 탭 발동 십자 파괴 애니메이션 개선",
+      "description": "유저가 스킬 블록을 탭하여 십자 범위가 파괴될 때 연출이 어색한 문제를 개선한다.\n1. 현재 흐름 분석: PuzzleBoardView에서 SkillBlockTappedEvent 발행 → BattleManager에서 ClearCrossPattern 호출 → ProcessCascadeAsync → GravityRefillEvent로 뷰에 전달. 십자 범위 블록이 PreGravityClearedCells 없이 즉시 사라지거나 애니메이션 없이 처리되는 지점 확인.\n2. BattleManager 또는 BoardController: 십자 파괴 좌표 목록을 Events.cs의 `SkillBlockCrossDestroyEvent`(신규) 혹은 `GravityRefillEvent.PreGravityClearedCells`에 담아 발행하도록 수정.\n   - Events.cs: `SkillBlockCrossDestroyEvent { List<(int col, int row)> Positions }` 추가.\n3. PuzzleBoardView: `SkillBlockCrossDestroyEvent` 구독 → 각 좌표의 BlockView에 대해 `AnimateDestroy` 순차(혹은 파문 효과) 재생.\n   - 십자 가운데 → 상하좌우 순서로 짧은 지연(0.05 s)을 두어 파문 느낌의 연쇄 파괴 연출 구현.\n4. BlockView: 필요 시 `AnimateCrossDestroy(float delay)` 오버로드 추가(delay 후 AnimateDestroy 호출).\n5. 스킬 블록 자체도 십자 파괴 시작 전에 별도 강조 애니메이션(DOPunchScale 등) 1회 재생 후 소멸되도록 처리.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/Battle/BattleManager.cs",
+        "Client/Assets/_Project/Scripts/Battle/Events.cs",
+        "Client/Assets/_Project/Scripts/UI/PuzzleBoardView.cs",
+        "Client/Assets/_Project/Scripts/UI/BlockView.cs"
+      ],
+      "dependencies": ["T-D8-002"]
+    },
+    {
+      "id": "T-D8-004",
+      "title": "HeroHUDView 체력 수치 텍스트 추가",
+      "description": "현재 HeroHUDView는 HP 바 fillAmount만 표시하고 실제 수치가 없다. 'cur / max' 형식의 텍스트를 추가한다.\n1. HeroHUDView.cs: `[SerializeField] private TextMeshProUGUI _hpText;` 필드 추가.\n2. Bind(): 초기값 `_hpText.text = $\"{hero.HP} / {hero.MaxHP}\";` 설정.\n3. `hero.OnHPChanged` 핸들러에서 HP 바 DOFillAmount와 함께 `_hpText.text = $\"{cur} / {max}\";` 갱신.\n4. 사망 시 '0 / max' 또는 '사망' 문자열로 표시.\n5. 텍스트 크기/위치: HP 바 위 또는 아래 중앙 정렬, 인스펙터에서 조절 가능하도록 SerializeField로 노출.\n6. using TMPro 임포트 추가.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/HeroHUDView.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D8-005",
+      "title": "EnemyHUDView 스킬 쿨다운 UI 추가",
+      "description": "현재 EnemyHUDView는 캐스팅 바(CastingBarFill)가 스킬 시전 직전에만 보인다. 쿨다운 잔여 시간을 숫자 텍스트로 항상 표시하여 유저가 적 스킬 발동 타이밍을 미리 파악할 수 있게 한다.\n1. EnemyHUDView.cs: `[SerializeField] private TextMeshProUGUI _cooldownText;` 필드 추가.\n2. Bind(): 스킬 없는 적(`hasSkill == false`)은 `_cooldownText.gameObject.SetActive(false)`.\n3. `enemy.OnSkillCastProgress` 핸들러: 쿨다운 잔여 시간을 `_cooldownText.text`로 갱신.\n   - EnemyState가 쿨다운 잔여 시간 이벤트/프로퍼티를 제공하지 않는 경우 `OnSkillCooldownChanged(float remaining)` 이벤트 추가(EnemyState.cs 수정 필요).\n4. 캐스팅 진행 중(progress > 0)에는 쿨다운 텍스트를 숨기고 CastingBarGroup을 표시.\n5. 스킬 시전 완료(`OnSkillCast`) 시 쿨다운 텍스트를 리셋하고 다시 표시.\n6. using TMPro 임포트 추가.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/EnemyHUDView.cs",
+        "Client/Assets/_Project/Scripts/Battle/EnemyState.cs"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "T-D8-006",
+      "title": "콤보 데미지 증폭 배율 UI 표시",
+      "description": "콤보 카운터 옆에 현재 콤보로 인한 데미지 증폭 배율을 직관적으로 표시하여 유저가 콤보 효과를 체감할 수 있게 한다.\n1. BattleHUD.cs: `BindCombo()` 내 콤보 변경 핸들러에 배율 텍스트 갱신 로직 추가.\n   - `[SerializeField] private TextMeshProUGUI _comboMultiplierText;` 필드 추가.\n   - 콤보 0일 때는 배율 텍스트 숨김.\n   - 콤보 1+일 때: `$\"x{multiplier:F1}\"` 형식으로 표시 (예: x1.0, x1.2, x1.4).\n2. ComboCalculator.GetMultiplier()를 사용하여 배율 계산: `1f + (count - 1) * 0.2f`.\n3. 배율 텍스트에 DOTween 강조 애니메이션: 배율이 높아질수록 텍스트 색상을 황→주→적으로 그라데이션.\n   - 콤보 1~2: 흰색, 3~4: 노란색, 5+: 주황색으로 DOColor 트위닝.\n4. `_comboMultiplierText`는 `_comboText`와 동일 `_comboGroup` 하위에 배치하여 콤보 종료 시 함께 숨김.\n5. using TMPro 임포트가 이미 있으므로 추가 불필요.",
+      "status": "completed",
+      "priority": "medium",
+      "files_to_modify": [
+        "Client/Assets/_Project/Scripts/UI/BattleHUD.cs"
+      ],
+      "dependencies": []
+    }
+  ]
+}

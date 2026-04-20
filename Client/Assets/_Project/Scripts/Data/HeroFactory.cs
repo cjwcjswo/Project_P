@@ -38,6 +38,7 @@ public static class HeroFactory
             growthDefense:       heroData.GrowthStats.Defense,
             level:               level,
             partyIndex:          partyIndex,
+            prefabPath:          heroData.PrefabPath ?? "",
             matchSkill:          matchSkill,
             uniqueSkill:         uniqueSkill,
             ultimateSkill:       ultimateSkill,
@@ -50,7 +51,8 @@ public static class HeroFactory
     }
 
     /// <summary>
-    /// skillId가 0이 아닌 경우 Repository에서 조회하여 HeroSkill을 생성한다.
+    /// GDD v1.0 모듈형 스키마로 HeroSkill을 생성한다.
+    /// SkillData.Actions 배열을 순회하여 SkillAction 리스트를 구성한다.
     /// </summary>
     private static HeroSkill BuildSkill(SkillDataRepository skillRepo, int skillId)
     {
@@ -63,25 +65,46 @@ public static class HeroFactory
             return null;
         }
 
-        if (!Enum.TryParse<ActionType>(sd.ActionType, ignoreCase: true, out var actionType))
+        if (sd.Actions == null || sd.Actions.Count == 0)
         {
-            Debug.LogWarning($"[HeroFactory] Unknown ActionType '{sd.ActionType}', defaulting to Attack.");
-            actionType = ActionType.Attack;
+            Debug.LogWarning($"[HeroFactory] Skill id={skillId} has no Actions defined.");
+            return new HeroSkill(sd.DisplayName, new List<SkillAction>());
         }
 
-        if (!Enum.TryParse<TargetScope>(sd.TargetScope, ignoreCase: true, out var targetScope))
+        var actions = new List<SkillAction>(sd.Actions.Count);
+        foreach (var ad in sd.Actions)
         {
-            Debug.LogWarning($"[HeroFactory] Unknown TargetScope '{sd.TargetScope}', defaulting to Single.");
-            targetScope = TargetScope.Single;
+            if (!Enum.TryParse<ActionType>(ad.ActionType, ignoreCase: true, out var actionType))
+            {
+                Debug.LogWarning($"[HeroFactory] Skill id={skillId}: Unknown ActionType '{ad.ActionType}', defaulting to Attack.");
+                actionType = ActionType.Attack;
+            }
+
+            var target = ad.Target ?? new TargetData();
+
+            if (!Enum.TryParse<TargetTeam>(target.Team, ignoreCase: true, out var team))
+            {
+                Debug.LogWarning($"[HeroFactory] Skill id={skillId}: Unknown TargetTeam '{target.Team}', defaulting to Enemy.");
+                team = TargetTeam.Enemy;
+            }
+
+            if (!Enum.TryParse<TargetStrategy>(target.Strategy, ignoreCase: true, out var strategy))
+            {
+                Debug.LogWarning($"[HeroFactory] Skill id={skillId}: Unknown TargetStrategy '{target.Strategy}', defaulting to Front.");
+                strategy = TargetStrategy.Front;
+            }
+
+            actions.Add(new SkillAction(
+                actionType:    actionType,
+                team:          team,
+                strategy:      strategy,
+                maxCount:      target.MaxCount,
+                targetIndex:   target.TargetIndex,
+                baseMultiplier: ad.BaseMultiplier,
+                statusEffects:  ad.StatusEffects ?? new List<StatusEffectData>()
+            ));
         }
 
-        return new HeroSkill(
-            actionType:     actionType,
-            targetScope:    targetScope,
-            baseMultiplier: sd.BaseMultiplier,
-            maxTargetCount: sd.MaxTargetCount,
-            name:           sd.DisplayName,
-            statusEffects:  sd.StatusEffects ?? new List<StatusEffectData>()
-        );
+        return new HeroSkill(sd.DisplayName, actions);
     }
 }

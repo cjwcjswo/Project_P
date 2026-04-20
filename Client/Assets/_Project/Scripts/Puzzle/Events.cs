@@ -14,6 +14,9 @@ public struct MatchFoundEvent
 
     /// <summary>이번 클리어에서 제거하지 않고 남기는 셀(예: 방금 생성된 고유 스킬 블록). 뷰 파괴 연출에서 제외한다.</summary>
     public List<(int col, int row)> PreservedSkillBlockCells;
+
+    /// <summary>매칭 제거된 스킬 블록의 십자 파괴 추가 좌표. 매치 영역 외부의 추가 파괴 셀.</summary>
+    public List<(int col, int row)> SkillCrossDestroyPositions;
 }
 
 public struct GravityRefillEvent
@@ -99,4 +102,15 @@ public struct SkillBlockTappedEvent
     public BlockType Color;
     public int Col;
     public int Row;
+}
+
+/// <summary>
+/// 탭 발동으로 스킬 블록의 십자 범위가 파괴될 때 발행.
+/// PuzzleBoardView가 구독하여 파문형 순차 파괴 애니메이션을 재생한다.
+/// </summary>
+public struct SkillBlockCrossDestroyEvent
+{
+    public int CenterCol;
+    public int CenterRow;
+    public List<(int col, int row)> CrossPositions;
 }

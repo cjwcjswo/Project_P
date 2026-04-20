@@ -32,6 +32,7 @@ public class EnemyState
     public event Action<bool> OnStunChanged;
     public event Action<float> OnSkillCastProgress;
     public event Action OnSkillCast;
+    public event Action<float, float> OnCooldownChanged;  // (remaining, total)
     public event Action<int> OnDamageTaken;
     public event Action<int> OnAutoAttack;
 
@@ -73,6 +74,9 @@ public class EnemyState
         SkillCastProgress = Math.Clamp(progress, 0f, 1f);
         OnSkillCastProgress?.Invoke(SkillCastProgress);
     }
+
+    public void UpdateCooldown(float remaining)
+        => OnCooldownChanged?.Invoke(remaining, SkillCooldown);
 
     public void NotifySkillCast()
     {

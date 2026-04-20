@@ -12,16 +12,30 @@ public class StatusEffectData
 }
 
 [Serializable]
+public class TargetData
+{
+    public string Team;
+    public string Strategy;
+    public int MaxCount;
+    public int TargetIndex;
+}
+
+[Serializable]
+public class ActionData
+{
+    public string ActionType;
+    public TargetData Target;
+    public float BaseMultiplier;
+    public List<StatusEffectData> StatusEffects;
+}
+
+[Serializable]
 public class SkillData
 {
     public int Id;
     public string DisplayName;
     public string EffectPrefabPath;
-    public string ActionType;
-    public string TargetScope;
-    public int MaxTargetCount;
-    public float BaseMultiplier;
-    public List<StatusEffectData> StatusEffects;
+    public List<ActionData> Actions;
 }
 
 [Serializable]

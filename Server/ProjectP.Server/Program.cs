@@ -112,16 +112,16 @@ app.MapPost("/api/battle/complete", (BattleCompleteRequest req) =>
     return Results.Ok(new BattleCompleteResponse(heroGains, reward.Gold));
 });
 
-// ── T-D7-010: 히어로/스킬 데이터 API 스텁 (Day 7 업데이트) ──────────────
+// ── T-D7-010 / T-D9-010: 히어로/스킬 데이터 API 스텁 ────────────────────
 
-// 인메모리 HeroData (HeroData.json과 동일 스키마 — Class/IllustrationPath/3종 스킬 ID)
+// 인메모리 HeroData (HeroData.json과 동기화 — Day 9: 10002 UniqueSkill→6001, 10005 UltimateSkill→6002)
 var heroDataDb = new List<HeroMasterDto>
 {
     new(10001, "견습 기사 아서", "Heroes/Knight_Arthur",  "Warrior",  "Illustrations/Arthur", 3,
         5001, 5006, 5009,
         new StatDto(1000, 100, 20), new StatDto(200, 15, 5), 1.5f, 0.1f),
     new(10002, "성녀 에이다",    "Heroes/Healer_Ada",     "Healer",   "Illustrations/Ada",    2,
-        5002, 5007, 0,
+        5002, 6001, 0,
         new StatDto(800,  70, 15),  new StatDto(150, 10, 4), 2.0f, 0.08f),
     new(10003, "수호자 브리트",  "Heroes/Guardian_Brit",  "Warrior",  "Illustrations/Brit",   3,
         5003, 5008, 5010,
@@ -130,40 +130,46 @@ var heroDataDb = new List<HeroMasterDto>
         5004, 0,    0,
         new StatDto(900, 120, 18),  new StatDto(180, 18, 4), 1.8f, 0.12f),
     new(10005, "암살자 레이",    "Heroes/Assassin_Ray",   "Assassin", "Illustrations/Ray",    3,
-        5005, 5006, 5009,
+        5005, 5006, 6002,
         new StatDto(700, 150, 10),  new StatDto(130, 22, 3), 1.2f, 0.15f),
 };
 
-// 인메모리 SkillData (SkillData.json과 동일 스키마 — 5006~5010 신규 추가)
+// 인메모리 SkillData — GDD v1.0 Actions[] 기반 스키마 (12종)
 var skillDataDb = new List<SkillMasterDto>
 {
-    new(5001, "회전 베기",   "Effects/Skills/SpinSlash",  "Attack", "Multi",  3, 1.5f,
-        new List<SkillEffectDto> {
-            new("Stun",    0.0f, 1.5f, 0.3f),
-            new("DefDown", 0.2f, 5.0f, 1.0f) }),
-    new(5002, "힐링 라이트", "Effects/Skills/HealLight",  "Heal",   "All",    0, 2.0f,
-        new List<SkillEffectDto>()),
-    new(5003, "수호의 방패", "Effects/Skills/Shield",     "Shield", "All",    0, 1.8f,
-        new List<SkillEffectDto>()),
-    new(5004, "전투 함성",   "Effects/Skills/Buff",       "Buff",   "All",    0, 0.3f,
-        new List<SkillEffectDto> {
-            new("AtkUp", 0.2f, 8.0f, 1.0f) }),
-    new(5005, "정의의 일격", "Effects/Skills/HeavyStrike","Attack", "Single", 1, 2.5f,
-        new List<SkillEffectDto>()),
-    // ── Day 7: UniqueSkill / UltimateSkill ──
-    new(5006, "심판의 강타",   "Effects/Skills/JudgmentStrike",  "Attack", "Single", 1, 3.5f,
-        new List<SkillEffectDto> {
-            new("Stun", 0.0f, 2.0f, 0.5f) }),
-    new(5007, "성스러운 빛",   "Effects/Skills/HolyLight",       "Heal",   "All",    0, 1.5f,
-        new List<SkillEffectDto>()),
-    new(5008, "절대 방어",     "Effects/Skills/AbsoluteShield",  "Shield", "All",    0, 2.5f,
-        new List<SkillEffectDto>()),
-    new(5009, "신의 철퇴",     "Effects/Skills/DivineMace",      "Attack", "All",    0, 4.0f,
-        new List<SkillEffectDto> {
-            new("DefDown", 0.3f, 8.0f, 1.0f) }),
-    new(5010, "불굴의 성벽",   "Effects/Skills/FortressWall",    "Buff",   "All",    0, 0.5f,
-        new List<SkillEffectDto> {
-            new("AtkUp", 0.3f, 10.0f, 1.0f) }),
+    new(5001, "회전 베기", "Effects/Skills/SpinSlash", new List<ActionDto> {
+        new("Attack", new TargetDto("Enemy", "Front", 3, 0), 1.5f,
+            new List<SkillEffectDto> { new("Stun", 0.0f, 1.5f, 0.3f), new("DefDown", 0.2f, 5.0f, 1.0f) }) }),
+    new(5002, "힐링 라이트", "Effects/Skills/HealLight", new List<ActionDto> {
+        new("Heal", new TargetDto("Ally", "Self", 1, 0), 2.0f, new List<SkillEffectDto>()) }),
+    new(5003, "수호의 방패", "Effects/Skills/Shield", new List<ActionDto> {
+        new("Shield", new TargetDto("Ally", "Self", 1, 0), 1.8f, new List<SkillEffectDto>()) }),
+    new(5004, "전투 함성", "Effects/Skills/Buff", new List<ActionDto> {
+        new("Buff", new TargetDto("Ally", "All", 0, 0), 0.3f,
+            new List<SkillEffectDto> { new("AtkUp", 0.2f, 8.0f, 1.0f) }) }),
+    new(5005, "정의의 일격", "Effects/Skills/HeavyStrike", new List<ActionDto> {
+        new("Attack", new TargetDto("Enemy", "Front", 1, 0), 2.5f, new List<SkillEffectDto>()) }),
+    new(5006, "심판의 강타", "Effects/Skills/JudgeStrike", new List<ActionDto> {
+        new("Attack", new TargetDto("Enemy", "Front", 1, 0), 3.5f,
+            new List<SkillEffectDto> { new("Stun", 0.0f, 2.0f, 0.5f) }) }),
+    new(5007, "성스러운 빛", "Effects/Skills/HolyLight", new List<ActionDto> {
+        new("Heal", new TargetDto("Ally", "All", 0, 0), 1.5f, new List<SkillEffectDto>()) }),
+    new(5008, "절대 방어", "Effects/Skills/AbsoluteShield", new List<ActionDto> {
+        new("Shield", new TargetDto("Ally", "All", 0, 0), 2.5f, new List<SkillEffectDto>()) }),
+    new(5009, "신의 철퇴", "Effects/Skills/DivineMace", new List<ActionDto> {
+        new("Attack", new TargetDto("Enemy", "All", 0, 0), 4.0f,
+            new List<SkillEffectDto> { new("DefDown", 0.3f, 8.0f, 1.0f) }) }),
+    new(5010, "불굴의 성벽", "Effects/Skills/IronWall", new List<ActionDto> {
+        new("Buff", new TargetDto("Ally", "All", 0, 0), 0.5f,
+            new List<SkillEffectDto> { new("AtkUp", 0.3f, 10.0f, 1.0f) }) }),
+    // ── Day 9: 복합 스킬 2종 ─────────────────────────────────────────────
+    new(6001, "성녀의 가호", "Effects/Skills/HolyAegis", new List<ActionDto> {
+        new("Heal", new TargetDto("Ally", "FixedIndex", 1, 0), 2.5f, new List<SkillEffectDto>()),
+        new("Buff", new TargetDto("Ally", "Self", 1, 0), 0.0f,
+            new List<SkillEffectDto> { new("DefUp", 0.5f, 10.0f, 1.0f) }) }),
+    new(6002, "흡혈의 일격", "Effects/Skills/VampiricStrike", new List<ActionDto> {
+        new("Attack", new TargetDto("Enemy", "Front", 2, 0), 2.0f, new List<SkillEffectDto>()),
+        new("Heal",   new TargetDto("Ally", "LowestHP", 1, 0), 1.5f, new List<SkillEffectDto>()) }),
 };
 
 app.MapGet("/api/heroes", () => Results.Ok(heroDataDb));
@@ -227,21 +233,29 @@ record BattleCompleteResponse(
     int GoldGained
 );
 
-// ── T-D6-010 / T-D7-010 Records ─────────────────────────────────────────
+// ── T-D6-010 / T-D7-010 / T-D9-010 Records ──────────────────────────────
 
 record StatDto(int MaxHP, int Attack, int Defense);
 
 record SkillEffectDto(string EffectType, float Value, float Duration, float Probability);
 
+/// <summary>GDD v1.0 타겟 객체</summary>
+record TargetDto(string Team, string Strategy, int MaxCount, int TargetIndex = 0);
+
+/// <summary>GDD v1.0 행동 객체</summary>
+record ActionDto(
+    string ActionType,
+    TargetDto Target,
+    float BaseMultiplier,
+    List<SkillEffectDto> StatusEffects
+);
+
+/// <summary>GDD v1.0 스킬 마스터 — Actions[] 배열 기반</summary>
 record SkillMasterDto(
     int Id,
     string DisplayName,
     string EffectPrefabPath,
-    string ActionType,
-    string TargetScope,
-    int MaxTargetCount,
-    float BaseMultiplier,
-    List<SkillEffectDto> StatusEffects
+    List<ActionDto> Actions
 );
 
 record HeroMasterDto(
